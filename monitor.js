@@ -108,6 +108,7 @@ async function main() {
         let aiData = await askAI(item.title, item.content);
         let engine = 'ai';
         if (!aiData) { aiData = ruleEngine(item.title); engine = 'rule'; }
+        
         if (item.content && item.content.length > 50) {
             const siteUrl = config.sites.find(s => item.url.includes(new URL(s.url).hostname))?.url;
             if (siteUrl && !state.seen[siteUrl].includes(item.url)) state.seen[siteUrl].push(item.url);
@@ -116,6 +117,7 @@ async function main() {
             if (item.retry_count <= 3) nextRetry.push(item);
             continue; 
         }
+        
         if (aiData && aiData.is_relevant) {
             const record = { ...item, ...aiData, engine, published_at: new Date().toLocaleDateString('zh-CN') };
             notices.unshift(record);
@@ -123,10 +125,15 @@ async function main() {
         }
     }
 
+    // 保存数据到 data 文件夹（给机器人自己看）
     fs.mkdirSync('./data', { recursive: true });
     fs.writeFileSync('./data/notices.json', JSON.stringify(notices, null, 2));
     fs.writeFileSync('./data/state.json', JSON.stringify(state, null, 2));
     fs.writeFileSync('./data/retry_queue.json', JSON.stringify(nextRetry, null, 2));
+
+    // ⭐️ 这一步是我给你加上的：把数据同步复制到 docs 文件夹（给网页看）
+    fs.mkdirSync('./docs', { recursive: true });
+    fs.writeFileSync('./docs/notices.json', JSON.stringify(notices, null, 2));
 
     if (emailList.length > 0) {
         let html = emailList.map(n => `<h3>[${n.score}星] ${n.title}</h3><p>${n.summary}</p>`).join('<hr>');
