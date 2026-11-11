@@ -1,0 +1,10 @@
+{
+  "max_new_per_site": 6,
+  "site_title": "学院信息筛选助手",
+  "college": "浙江工商大学食品与生物工程学院",
+  "sites": [
+    { "name": "通知公告", "url": "https://spxy.zjgsu.edu.cn/?tzgg.html", "enabled": true },
+    { "name": "学生工作", "url": "https://spxy.zjgsu.edu.cn/?xgdt.html", "enabled": true },
+    { "name": "学校教务", "url": "https://jww.zjgsu.edu.cn/1331/list.htm", "enabled": true }
+  ]
+}
