@@ -28,10 +28,28 @@ async function sendMail(subject, html) {
     } catch (err) { console.error("❌ 发邮件失败:", err.message); }
 }
 
-// 【修复3】：AI 失败时返回 null，不瞎猜
 async function askAI(title, content) {
     if (!AI_KEY) return null;
-    const prompt = `你是一个校园通知提取助手。请严格按JSON返回：{"is_relevant": true或false, "category": "类别", "custom_tags": ["标签"], "summary": "摘要", "event_time": "时间", "key_points": ["要点"], "score": 1到5的整数}\\n标题：${title}\\n正文：${content.substring(0, 3000)}`;
+    
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0];
+
+    // 新 Prompt：让 AI 自己决定要不要发邮件提醒 (should_alert)
+    const prompt = `你是一个严谨的校园通知提取助手。今天是 ${dateStr}。请阅读以下通知，严格按 JSON 返回：
+{
+  "is_relevant": true或false (如果是获奖喜报、社团招新、活动总结等纯宣传内容填false),
+  "is_expired": true或false (判断报名或活动时间是否已经早于今天。找不到时间填false),
+  "should_alert": true或false (⭐核心字段：如果这件事需要学生立刻采取行动/有明确的近期截止日期/关乎评奖评优或考试，必须填true，以便发邮件提醒；如果是长期讲座、非紧急的背景说明，填false),
+  "category": "类别",
+  "custom_tags": ["标签"],
+  "summary": "一句话摘要",
+  "event_time": "时间",
+  "key_points": ["要点1", "要点2"],
+  "score": 1到5的整数 (5代表极紧急)
+}
+标题：${title}
+正文：${content.substring(0, 3000)}`;
+
     try {
         const res = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
             method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${AI_KEY}` },
@@ -42,26 +60,30 @@ async function askAI(title, content) {
         const match = data.choices[0].message.content.match(/\\{[\\s\\S]*\\}/);
         if (!match) return null;
         const parsed = JSON.parse(match[0]);
-        // 归一化防崩
+        
         if (typeof parsed.is_relevant !== 'boolean') return null;
+        
+        // 兜底防崩溃
         parsed.custom_tags = Array.isArray(parsed.custom_tags) ? parsed.custom_tags : [];
         parsed.key_points = Array.isArray(parsed.key_points) ? parsed.key_points : ['查看原文'];
         parsed.summary = parsed.summary || title;
         parsed.event_time = parsed.event_time || '详见原文';
         parsed.score = parseInt(parsed.score) || 3;
+        parsed.is_expired = typeof parsed.is_expired === 'boolean' ? parsed.is_expired : false;
+        // 如果 AI 忘了给 should_alert，默认若星级>=4就发
+        parsed.should_alert = typeof parsed.should_alert === 'boolean' ? parsed.should_alert : (parsed.score >= 4);
+        
         return parsed;
     } catch (e) { return null; }
 }
 
-// 【修复3】：规则引擎改造。明显不要的直接扔掉，明显要的留下，拿不准的返回 null 进重试队列
 function ruleEngine(title) {
     const ignoreList = ['社团招新', '喜报', '总结', '圆满结束', '顺利举办', '讲座回顾', '成功举办', '新闻稿', '侧记'];
     if (ignoreList.some(w => title.includes(w))) return { is_relevant: false, skip: true };
     
     if (title.includes('竞赛') || title.includes('考试') || title.includes('报名') || title.includes('评奖') || title.includes('选课')) {
-        return { is_relevant: true, category: '重要', summary: title, score: 3, key_points: ['请查看原文详情'], custom_tags: [] };
+        return { is_relevant: true, is_expired: false, should_alert: true, category: '重要', summary: title, score: 4, key_points: ['请查看原文详情'], custom_tags: [] };
     }
-    // 拿不准的，交给重试队列
     return null;
 }
 
@@ -88,7 +110,6 @@ async function fetchNewLinks(isBaseline) {
                 let fullUrl;
                 try { fullUrl = new URL(href, site.url).href; } catch { continue; }
 
-                // 【修复1】：先用 fullUrl 判重，绝对不漏
                 if (state.seen[site.url].includes(fullUrl)) continue;
 
                 let content = "";
@@ -101,7 +122,6 @@ async function fetchNewLinks(isBaseline) {
 
                 links.push({ title, url: fullUrl, content, site: site.name });
 
-                // 【修复2】：如果是首跑基线，不限制条数（最多抓200条防止超时）；如果是日常轮，限制6条
                 if (!isBaseline && links.length >= config.max_new_per_site) break;
                 if (isBaseline && links.length >= 200) break;
             }
@@ -128,49 +148,42 @@ async function main() {
         let aiData = await askAI(item.title, item.content);
         let engine = 'ai';
         
-        // 如果 AI 失败，用规则兜底
         if (!aiData) { 
             aiData = ruleEngine(item.title); 
             engine = 'rule'; 
         }
 
-        // 【修复3】：AI和规则都判不出，或者正文抓不到，进重试队列，绝不标已读！
         if (!aiData || !item.content || item.content.length < 50) {
             item.retry_count = (item.retry_count || 0) + 1;
-            if (item.retry_count <= 3) {
-                nextRetry.push(item);
-            }
+            if (item.retry_count <= 3) nextRetry.push(item);
             continue;
         }
 
-        // 明确不要的（喜报等），直接打入冷宫
+        // 明确不要的（跳过）
         if (aiData.skip || aiData.is_relevant === false) {
-            if (!state.seen[item.site]?.includes(item.url)) {
-                const siteUrl = config.sites.find(s => item.url.includes(new URL(s.url).hostname))?.url;
-                if (siteUrl && !state.seen[siteUrl].includes(item.url)) state.seen[siteUrl].push(item.url);
-            }
+            const siteUrl = config.sites.find(s => item.url.includes(new URL(s.url).hostname))?.url;
+            if (siteUrl && !state.seen[siteUrl].includes(item.url)) state.seen[siteUrl].push(item.url);
             continue;
         }
 
-        // 明确要的，标记已读，存入数据库
+        // 留档
         const siteUrl = config.sites.find(s => item.url.includes(new URL(s.url).hostname))?.url;
         if (siteUrl && !state.seen[siteUrl].includes(item.url)) state.seen[siteUrl].push(item.url);
 
         const record = { ...item, ...aiData, engine, published_at: new Date().toLocaleDateString('zh-CN') };
         notices.unshift(record);
 
-        // 【修复2】：如果是首跑基线，只入库，绝对不发邮件！
-        if (!isBaseline) {
+        // ⭐️ 核心判断：AI说需要发提醒(should_alert) 且 没过期(!is_expired)，才进邮箱！
+        if (record.should_alert && !record.is_expired) {
             emailList.push(record);
         }
     }
 
     if (isBaseline) {
         state.initialized = true;
-        console.log(`✅ 基线建立成功，共登记 ${links.length} 条历史通知。`);
+        console.log(`✅ 基线建立成功，共登记 ${links.length} 条。`);
     }
 
-    // 保存数据（给网页和机器人）
     fs.mkdirSync('./data', { recursive: true });
     fs.writeFileSync('./data/notices.json', JSON.stringify(notices, null, 2));
     fs.writeFileSync('./data/state.json', JSON.stringify(state, null, 2));
@@ -179,16 +192,15 @@ async function main() {
     fs.mkdirSync('./docs', { recursive: true });
     fs.writeFileSync('./docs/notices.json', JSON.stringify(notices, null, 2));
 
-    // 发日常邮件
+    // 邮件发送
     if (emailList.length > 0) {
-        let html = emailList.map(n => `<h3>[${n.score}星] ${n.title}</h3><p>${n.summary}</p>`).join('<hr>');
-        const urgentCount = emailList.filter(n => n.score >= 4).length;
-        await sendMail(urgentCount > 0 ? `【需要处理${urgentCount}条】新通知` : `【校园通知】发现${emailList.length}条新动态`, html);
+        let html = emailList.map(n => `<h3>[${n.score}星] ${n.title}</h3><p><b>时间：</b>${n.event_time}</p><p>${n.summary}</p>`).join('<hr>');
+        const prefix = isBaseline ? "【历史重要通知补发】" : "【重要新通知】";
+        await sendMail(`${prefix}共${emailList.length}条`, html);
     }
     
-    // 积压告警
     if (nextRetry.length > 5) {
-        await sendMail("【系统告警】重试队列积压", `<p>当前有 ${nextRetry.length} 条通知解析失败，请检查网络或AI接口。</p>`);
+        await sendMail("【系统告警】重试队列积压", `<p>当前有 ${nextRetry.length} 条解析失败。</p>`);
     }
 }
 
