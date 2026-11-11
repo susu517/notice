@@ -1,207 +1,456 @@
-import fs from 'fs';
-import fetch from 'node-fetch';
-import * as cheerio from 'cheerio';
-import nodemailer from 'nodemailer';
+/**
+ * 主流程：检查常用官网栏目 → 发现新通知 → 提炼 → 存留档 → 生成网页 → 邮件推送
+ *
+ * 首次运行只登记基线（把现有通知的链接记下来），不推送历史通知；
+ * 从第二次开始，只有新出现的链接才会被抓取、提炼、推送。
+ */
 
-const AI_KEY = process.env.ZHIPU_KEY;
-const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
+const fs = require('fs');
+const path = require('path');
 
-let state = { initialized: false, seen: {} };
-let notices = [];
-let retryQueue = [];
+const crawler = require('./crawler');
+const screener = require('./screener');
+const render = require('./render');
+const ai = require('./ai');
 
-try { if (fs.existsSync('./data/state.json')) state = JSON.parse(fs.readFileSync('./data/state.json', 'utf8')); } catch(e){}
+const ROOT = __dirname;
+const DATA_DIR = path.join(ROOT, 'data');
+const NOTICE_FILE = path.join(DATA_DIR, 'notices.json');
+const STATE_FILE = path.join(DATA_DIR, 'state.json');
+const RETRY_FILE = path.join(DATA_DIR, 'retry_queue.json');
+const RETRY_MAX = 30;          // 队列上限，超过就丢最旧的，防止无限膨胀
+const RETRY_EXPIRE_MS = 24 * 3600 * 1000; // 超过一天还重试不成的，放弃
+const DOCS_DIR = path.join(ROOT, 'docs');
+
+const config = JSON.parse(fs.readFileSync(path.join(ROOT, 'config.json'), 'utf8'));
+
+function readJson(file, fallback) {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    return fallback;
+  }
+}
+
+function writeJson(file, value) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, JSON.stringify(value, null, 2), 'utf8');
+}
+
+const notices = readJson(NOTICE_FILE, []);
+let retryQueue = readJson(RETRY_FILE, []);
+const state = readJson(STATE_FILE, {});
+
+// 手工建仓库时 state.json 常被填成 {}。缺字段会让按栏目记录直接抛错，
+// 这里一律补齐；旧版把 seen 写成全局数组的，按「从没登记过」处理，重新建基线。
 if (!state.seen || typeof state.seen !== 'object' || Array.isArray(state.seen)) state.seen = {};
-if (!state.initialized) state.initialized = false;
+if (!state.site_checked || typeof state.site_checked !== 'object' || Array.isArray(state.site_checked)) state.site_checked = {};
+if (typeof state.seeded !== 'boolean') state.seeded = false;
+if (typeof state.last_alert !== 'string') state.last_alert = '';
 
-try { if (fs.existsSync('./data/notices.json')) notices = JSON.parse(fs.readFileSync('./data/notices.json', 'utf8')); } catch(e){}
-try { if (fs.existsSync('./data/retry_queue.json')) retryQueue = JSON.parse(fs.readFileSync('./data/retry_queue.json', 'utf8')); } catch(e){}
+/**
+ * 检查一个栏目，返回新条目
+ */
+async function checkSite(site) {
+  const html = await crawler.fetchHtml(site.url);
+  const list = crawler.parseList(html, site.url);
+  const seen = new Set(state.seen[site.url] || []);
+  const fresh = list.filter((it) => !seen.has(it.url));
+  // 这个栏目此前从未检查过：本次只登记，不当作「新通知」处理
+  const isNewSite = !Array.isArray(state.seen[site.url]);
 
-async function sendMail(subject, html) {
-    try {
-        let transporter = nodemailer.createTransport({ 
-            host: process.env.SMTP_HOST, port: parseInt(process.env.SMTP_PORT), secure: true, 
-            auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } 
-        });
-        await transporter.sendMail({ from: `"AI校园助手" <${process.env.SMTP_USER}>`, to: process.env.MAIL_TO, subject, html });
-        console.log(`✅ 邮件发送: ${subject}`);
-    } catch (err) { console.error("❌ 发邮件失败:", err.message); }
+  state.site_checked[site.url] = new Date().toISOString();
+  // 这里只记「检查时间」，不把所有链接记为已读。
+  // 每轮处理条数有上限，若把本轮没轮到的也标记已读，那些通知下一轮就不再算新，会永久跳过。
+  // 只有真正处理过的才标记（见 markSeen）。
+
+  return { list, fresh, isNewSite };
 }
 
-async function askAI(title, content) {
-    if (!AI_KEY) return null;
-    
-    const now = new Date();
-    const dateStr = now.toISOString().split('T')[0];
-
-    // 新 Prompt：让 AI 自己决定要不要发邮件提醒 (should_alert)
-    const prompt = `你是一个严谨的校园通知提取助手。今天是 ${dateStr}。请阅读以下通知，严格按 JSON 返回：
-{
-  "is_relevant": true或false (如果是获奖喜报、社团招新、活动总结等纯宣传内容填false),
-  "is_expired": true或false (判断报名或活动时间是否已经早于今天。找不到时间填false),
-  "should_alert": true或false (⭐核心字段：如果这件事需要学生立刻采取行动/有明确的近期截止日期/关乎评奖评优或考试，必须填true，以便发邮件提醒；如果是长期讲座、非紧急的背景说明，填false),
-  "category": "类别",
-  "custom_tags": ["标签"],
-  "summary": "一句话摘要",
-  "event_time": "时间",
-  "key_points": ["要点1", "要点2"],
-  "score": 1到5的整数 (5代表极紧急)
-}
-标题：${title}
-正文：${content.substring(0, 3000)}`;
-
-    try {
-        const res = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
-            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${AI_KEY}` },
-            body: JSON.stringify({ model: "glm-4-flash", messages: [{ role: "user", content: prompt }], temperature: 0.1 })
-        });
-        if (!res.ok) return null;
-        const data = await res.json();
-        const match = data.choices[0].message.content.match(/\\{[\\s\\S]*\\}/);
-        if (!match) return null;
-        const parsed = JSON.parse(match[0]);
-        
-        if (typeof parsed.is_relevant !== 'boolean') return null;
-        
-        // 兜底防崩溃
-        parsed.custom_tags = Array.isArray(parsed.custom_tags) ? parsed.custom_tags : [];
-        parsed.key_points = Array.isArray(parsed.key_points) ? parsed.key_points : ['查看原文'];
-        parsed.summary = parsed.summary || title;
-        parsed.event_time = parsed.event_time || '详见原文';
-        parsed.score = parseInt(parsed.score) || 3;
-        parsed.is_expired = typeof parsed.is_expired === 'boolean' ? parsed.is_expired : false;
-        // 如果 AI 忘了给 should_alert，默认若星级>=4就发
-        parsed.should_alert = typeof parsed.should_alert === 'boolean' ? parsed.should_alert : (parsed.score >= 4);
-        
-        return parsed;
-    } catch (e) { return null; }
+function markSeen(site, urls) {
+  if (!urls.length) return;
+  state.seen[site.url] = Array.from(new Set([...(state.seen[site.url] || []), ...urls]));
 }
 
-function ruleEngine(title) {
-    const ignoreList = ['社团招新', '喜报', '总结', '圆满结束', '顺利举办', '讲座回顾', '成功举办', '新闻稿', '侧记'];
-    if (ignoreList.some(w => title.includes(w))) return { is_relevant: false, skip: true };
-    
-    if (title.includes('竞赛') || title.includes('考试') || title.includes('报名') || title.includes('评奖') || title.includes('选课')) {
-        return { is_relevant: true, is_expired: false, should_alert: true, category: '重要', summary: title, score: 4, key_points: ['请查看原文详情'], custom_tags: [] };
+/**
+ * 抓正文 + 判定 + 提炼
+ */
+async function processOne(item) {
+  let detail;
+  let grabbed = true;
+  try {
+    const html = await crawler.fetchHtml(item.url);
+    detail = crawler.parseDetail(html, item.url);
+  } catch (e) {
+    // 有些通知正文极短（内容全在附件里），抓不到正文不代表这条不重要：
+    // 退化成「只用标题和列表页日期判定」，留档里给出原文链接让人自己去看
+    detail = { title: item.title, content: '', published_at: item.date || '', short: true };
+    grabbed = false;
+  }
+  // 发布日期优先用列表页的日期（正文里的日期可能是活动日期，不是发布时间）
+  const published = item.date || detail.published_at || '';
+  const title = detail.title || item.title;
+  const content = detail.content || '';
+
+  const aiOn = !!(config.ai && config.ai.enabled);
+  let aiOut = null;
+  let aiFail = '';
+
+  // 第一道：AI 读语义。正文为空时不用试，模型只能看到标题，结论不可信
+  if (aiOn && content) {
+    const r = await ai.askAI({ title, content }, { model: config.ai.model });
+    if (r.ok) aiOut = r.data;
+    else aiFail = r.reason;
+  } else if (aiOn) {
+    aiFail = '正文没抓到';
+  }
+
+  // AI 判为不相关：直接跳过，不再走规则（模型看懂语义后的否定比正则更可靠）
+  if (aiOut && !aiOut.is_relevant) {
+    return { detail, published, result: null, engine: 'ai', skipped: 'ai', reason: aiOut.summary };
+  }
+
+  // 第二道：AI 有结论就用它，时间仍由规则算（AI 给的格式不稳定，会破坏并列口径）
+  if (aiOut && aiOut.is_relevant) {
+    const times = screener.formatTimes(content);
+    return {
+      detail,
+      published,
+      engine: 'ai',
+      result: {
+        title,
+        url: item.url,
+        published_at: published,
+        category: aiOut.category,
+        tags: aiOut.tags || [],
+        score: aiOut.score,
+        event_time: times || aiOut.time_hint || '',
+        key_points: aiOut.key_points,
+        summary: aiOut.summary,
+      },
+    };
+  }
+
+  // 第三道：规则兜底
+  const result = screener.screenOne({
+    title,
+    url: item.url,
+    content,
+    published_at: published,
+  });
+
+  // 正文没抓到、AI 也失败、规则又判不出东西：这一条不能当已处理，进重试队列
+  if (!result && !grabbed) {
+    return { detail, published, result: null, engine: 'none', retry: true, reason: aiFail || '正文抓取失败' };
+  }
+
+  return { detail, published, result, engine: 'rule', aiFail };
+}
+
+/**
+ * 并发执行，限制同时进行的数量
+ */
+async function mapLimit(items, limit, fn) {
+  const out = [];
+  let i = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (i < items.length) {
+      const idx = i++;
+      try {
+        out[idx] = await fn(items[idx], idx);
+      } catch (e) {
+        out[idx] = { error: e.message };
+      }
     }
-    return null;
-}
-
-async function fetchNewLinks(isBaseline) {
-    let links = [];
-    let allFailed = true;
-    
-    for (const site of config.sites) {
-        if (!site.enabled) continue;
-        try {
-            const res = await fetch(site.url);
-            const html = await res.text();
-            const $ = cheerio.load(html);
-            const elements = $('a').toArray();
-            const siteSeen = state.seen[site.url] || [];
-            if (!state.seen[site.url]) state.seen[site.url] = [];
-
-            for (let el of elements) {
-                const href = $(el).attr('href');
-                if (!href || href.startsWith('javascript:') || href.startsWith('mailto:') || href === '#') continue;
-                const title = $(el).text().trim();
-                if (title.length < 5) continue;
-
-                let fullUrl;
-                try { fullUrl = new URL(href, site.url).href; } catch { continue; }
-
-                if (state.seen[site.url].includes(fullUrl)) continue;
-
-                let content = "";
-                try {
-                    const detailRes = await fetch(fullUrl);
-                    const detail$ = cheerio.load(await detailRes.text());
-                    detail$('script, style').remove();
-                    content = detail$('body').text().replace(/\\s+/g, ' ').trim();
-                } catch (e) { content = ""; }
-
-                links.push({ title, url: fullUrl, content, site: site.name });
-
-                if (!isBaseline && links.length >= config.max_new_per_site) break;
-                if (isBaseline && links.length >= 200) break;
-            }
-            allFailed = false;
-        } catch (e) { console.log(`❌ 抓取失败: ${site.name}`); }
-        if (!isBaseline && links.length >= config.max_new_per_site) break;
-    }
-    return { links, allFailed };
+  });
+  await Promise.all(workers);
+  return out;
 }
 
 async function main() {
-    const isBaseline = !state.initialized;
-    const { links, allFailed } = await fetchNewLinks(isBaseline);
+  const report = {
+    sites: [], added: [], scanned: 0, errors: [],
+    aiUsed: 0, ruleUsed: 0, aiRejected: 0, retried: 0, aiFails: [], deferred: 0,
+  };
+  const maxNew = config.max_new_per_site || 6;
 
-    if (isBaseline && allFailed) {
-        await sendMail("【系统告警】首次抓取失败", "<p>所有栏目均不可达，请检查网址或网络。</p>");
-        return;
-    }
+  for (const site of config.sites) {
+    if (!site.enabled) continue;
+    const stat = { name: site.name, url: site.url, listed: 0, fresh: 0, kept: 0, first: !state.seeded };
 
-    const toProcess = [...retryQueue, ...links];
-    let nextRetry = [], emailList = [];
+    try {
+      const { list, fresh, isNewSite } = await checkSite(site);
+      stat.listed = list.length;
+      stat.fresh = fresh.length;
+      report.scanned += list.length;
 
-    for (const item of toProcess) {
-        let aiData = await askAI(item.title, item.content);
-        let engine = 'ai';
-        
-        if (!aiData) { 
-            aiData = ruleEngine(item.title); 
-            engine = 'rule'; 
+      if (!state.seeded || isNewSite) {
+        // 首次运行，或这个栏目第一次被检查：只登记基线，不抓正文、不入库、不推送
+        markSeen(site, list.map((i) => i.url));
+        stat.first = true;
+        report.sites.push(stat);
+        continue;
+      }
+
+      // 只取最新的若干条，避免一次抓太多把任务拖超时。
+      // 没轮到的保持未读，下一轮接着处理，不会丢。
+      const sorted = fresh.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+      const target = sorted.slice(0, maxNew);
+      const deferred = sorted.length - target.length;
+      if (deferred > 0) {
+        stat.deferred = deferred;
+        report.deferred += deferred;
+      }
+
+      // 上一轮没处理成的先补，再处理本轮新发现的
+      const carry = retryQueue.filter((r) => r.site === site.name);
+      const batch = carry.concat(target);
+
+      const outcomes = await mapLimit(batch, 3, processOne);
+      const doneUrls = [];
+      outcomes.forEach((o, idx) => {
+        const src = batch[idx];
+        if (!o || o.error) {
+          report.errors.push(`${site.name}：${String(src.title).slice(0, 20)} → ${o ? o.error : '未知错误'}`);
+          return;
+        }
+        doneUrls.push(src.url);
+
+        // 该重试的：留在队列里，下一轮再来，同时不把它当成已处理
+        if (o.retry) {
+          const keep = retryQueue.find((r) => r.url === src.url);
+          if (!keep) {
+            retryQueue.push({
+              url: src.url,
+              title: src.title,
+              date: src.date || '',
+              site: site.name,
+              tries: (src.tries || 0) + 1,
+              first_at: src.first_at || new Date().toISOString(),
+              last_reason: o.reason || '',
+            });
+          } else {
+            keep.tries = (keep.tries || 0) + 1;
+            keep.last_reason = o.reason || '';
+          }
+          report.retried += 1;
+          return;
         }
 
-        if (!aiData || !item.content || item.content.length < 50) {
-            item.retry_count = (item.retry_count || 0) + 1;
-            if (item.retry_count <= 3) nextRetry.push(item);
-            continue;
+        // 判定完成（保留或跳过），从队列里摘掉
+        retryQueue = retryQueue.filter((r) => r.url !== src.url);
+
+        if (!o.result) {
+          if (o.skipped === 'ai') {
+            report.aiRejected += 1;
+            console.log(`  AI 判为不保留：${String(src.title).slice(0, 28)}（${o.reason || ''}）`);
+          }
+          return;
         }
 
-        // 明确不要的（跳过）
-        if (aiData.skip || aiData.is_relevant === false) {
-            const siteUrl = config.sites.find(s => item.url.includes(new URL(s.url).hostname))?.url;
-            if (siteUrl && !state.seen[siteUrl].includes(item.url)) state.seen[siteUrl].push(item.url);
-            continue;
-        }
-
-        // 留档
-        const siteUrl = config.sites.find(s => item.url.includes(new URL(s.url).hostname))?.url;
-        if (siteUrl && !state.seen[siteUrl].includes(item.url)) state.seen[siteUrl].push(item.url);
-
-        const record = { ...item, ...aiData, engine, published_at: new Date().toLocaleDateString('zh-CN') };
-        notices.unshift(record);
-
-        // ⭐️ 核心判断：AI说需要发提醒(should_alert) 且 没过期(!is_expired)，才进邮箱！
-        if (record.should_alert && !record.is_expired) {
-            emailList.push(record);
-        }
+        const notice = {
+          ...o.result,
+          published_at: o.published,
+          site: site.name,
+          engine: o.engine,
+          found_at: new Date().toISOString(),
+          // 正文快照：官网链接以后失效或改版，内容仍在自己的留档里
+          content: String(o.detail.content || '').slice(0, 1600),
+        };
+        // 同链接、同标题都去重
+        if (notices.some((n) => n.url === notice.url || n.title === notice.title)) return;
+        notices.push(notice);
+        report.added.push(notice);
+        stat.kept += 1;
+        if (o.engine === 'ai') report.aiUsed += 1;
+        else report.ruleUsed += 1;
+        if (o.aiFail) report.aiFails.push(`${String(src.title).slice(0, 20)}：${o.aiFail}`);
+      });
+      markSeen(site, doneUrls);
+    } catch (e) {
+      stat.failed = true;
+      stat.reason = e.message;
+      report.errors.push(`${site.name}：${e.message}`);
     }
+    report.sites.push(stat);
+  }
 
-    if (isBaseline) {
-        state.initialized = true;
-        console.log(`✅ 基线建立成功，共登记 ${links.length} 条。`);
-    }
+  // 留档排序：发布时间从新到旧，没有日期的沉底
+  notices.sort((a, b) => {
+    const da = a.published_at || '0';
+    const db = b.published_at || '0';
+    return db.localeCompare(da);
+  });
+  writeJson(NOTICE_FILE, notices);
 
-    fs.mkdirSync('./data', { recursive: true });
-    fs.writeFileSync('./data/notices.json', JSON.stringify(notices, null, 2));
-    fs.writeFileSync('./data/state.json', JSON.stringify(state, null, 2));
-    fs.writeFileSync('./data/retry_queue.json', JSON.stringify(nextRetry, null, 2));
-    
-    fs.mkdirSync('./docs', { recursive: true });
-    fs.writeFileSync('./docs/notices.json', JSON.stringify(notices, null, 2));
+  // 只有至少一个栏目真抓到列表，才认为基线建成。
+  // 首轮全部抓取失败（网络抖动、被墙、栏目改版）时保持 seeded=false，
+  // 下一轮重新登记；否则第二轮会把整个历史列表当成新通知一次性推给用户。
+  const sitesOk = report.sites.filter((x) => !x.failed && x.listed > 0).length;
+  if (!state.seeded) {
+    if (sitesOk > 0) state.seeded = true;
+    else report.errors.push('本轮所有栏目都没抓到内容，基线未建立，下一轮重新登记');
+  }
+  writeJson(STATE_FILE, state);
 
-    // 邮件发送
-    if (emailList.length > 0) {
-        let html = emailList.map(n => `<h3>[${n.score}星] ${n.title}</h3><p><b>时间：</b>${n.event_time}</p><p>${n.summary}</p>`).join('<hr>');
-        const prefix = isBaseline ? "【历史重要通知补发】" : "【重要新通知】";
-        await sendMail(`${prefix}共${emailList.length}条`, html);
+  // 重试队列：超过一天的重试仍失败就放弃并记日志，避免永远卡着
+  const nowMs = Date.now();
+  const dropped = retryQueue.filter((r) => nowMs - new Date(r.first_at || 0).getTime() > RETRY_EXPIRE_MS);
+  retryQueue = retryQueue.filter((r) => nowMs - new Date(r.first_at || 0).getTime() <= RETRY_EXPIRE_MS);
+  if (retryQueue.length > RETRY_MAX) retryQueue = retryQueue.slice(-RETRY_MAX);
+  if (dropped.length) {
+    dropped.forEach((r) => report.errors.push(`重试超时放弃：${String(r.title).slice(0, 20)}（${r.last_reason || ''}）`));
+  }
+  writeJson(RETRY_FILE, retryQueue);
+
+  // 生成网页
+  try {
+    fs.mkdirSync(DOCS_DIR, { recursive: true });
+    fs.writeFileSync(path.join(DOCS_DIR, 'index.html'), render.page(notices, config), 'utf8');
+    fs.writeFileSync(path.join(DOCS_DIR, '.nojekyll'), '', 'utf8');
+  } catch (e) {
+    report.errors.push(`生成网页失败：${e.message}`);
+  }
+
+  // 邮件推送：只有真正新增且保留下来的才推
+  if (report.added.length && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    try {
+      await sendMail(report.added);
+      console.log(`邮件已发送：${report.added.length} 条`);
+    } catch (e) {
+      report.errors.push(`邮件发送失败：${e.message}`);
     }
-    
-    if (nextRetry.length > 5) {
-        await sendMail("【系统告警】重试队列积压", `<p>当前有 ${nextRetry.length} 条解析失败。</p>`);
+  }
+
+  // ---------- 运行异常告警 ----------
+  // 原则：只在「用户需要动手」时发，同类问题一天最多发一次，避免变成骚扰
+  const alerts = [];
+  const dead = report.sites.filter((x) => x.failed);
+  const alive = report.sites.length - dead.length;
+  if (report.sites.length && alive === 0) {
+    alerts.push('所有栏目本轮都抓取失败，一条通知也没拿到。多半是站点打不开或栏目地址改版。');
+    dead.forEach((x) => alerts.push(`　${x.name}：${x.reason || '未知原因'}`));
+  } else if (dead.length) {
+    alerts.push(`以下栏目本轮抓取失败：${dead.map((x) => x.name + '（' + (x.reason || '') + '）').join('；')}`);
+  }
+  if (retryQueue.length > 10) {
+    alerts.push(`重试队列积压 ${retryQueue.length} 条，说明有通知反复处理不成功。`);
+    const reasons = [...new Set(retryQueue.map((r) => r.last_reason).filter(Boolean))].slice(0, 3);
+    if (reasons.length) alerts.push(`最近的原因：${reasons.join('；')}`);
+  }
+  const keyErr = report.aiFails.find((r) => /401|403|没有配置|密钥|令牌/i.test(r));
+  if (keyErr && report.aiUsed === 0) {
+    alerts.push(`AI 密钥问题：${keyErr}　当前所有通知都在用规则判定，功能可用但精度下降。`);
+  }
+
+  if (alerts.length) {
+    const todayKey = new Date().toLocaleDateString('zh-CN');
+    const blocked = state.last_alert === todayKey;
+    if (blocked) {
+      console.log('今天已发过一次异常告警，本轮不重复发送。');
+    } else {
+      try {
+        const sent = await sendAlert('通知助手自检未通过', alerts);
+        state.last_alert = todayKey;
+        writeJson(STATE_FILE, state);
+        console.log(sent ? '已发送异常告警邮件' : '检测到异常，但没有配置邮箱，只写入日志');
+      } catch (e) {
+        report.errors.push(`告警邮件发送失败：${e.message}`);
+      }
     }
+    alerts.forEach((a) => console.log('异常：' + a));
+  }
+
+  // 控制台汇总（GitHub Actions 日志里能直接看到）
+  if (report.deferred > 0) {
+    console.log(`本轮有条数上限，${report.deferred} 条顺延到下一轮（保持未读，不会丢）。`);
+  }
+
+  const firstRun = report.sites.every((s) => s.first);
+  if (firstRun) {
+    console.log('首次运行：只登记基线，不推送历史通知。');
+    console.log(`已登记 ${Object.values(state.seen).reduce((n, arr) => n + arr.length, 0)} 个链接。`);
+  } else {
+    console.log(`新增保留 ${report.added.length} 条`);
+  }
+  report.sites.forEach((s) => {
+    console.log(`  ${s.name}：列出 ${s.listed} 条，新发现 ${s.fresh} 条，保留 ${s.kept} 条`);
+  });
+  const aiOn = !!(config.ai && config.ai.enabled);
+  if (aiOn) {
+    console.log(`AI 提炼 ${report.aiUsed} 条，规则兜底 ${report.ruleUsed} 条，AI 判为不保留 ${report.aiRejected} 条`);
+    if (report.aiFails.length) {
+      console.log('AI 调用异常（已自动退回规则）：');
+      report.aiFails.slice(0, 5).forEach((e) => console.log('  - ' + e));
+      if (report.aiFails.length > 5) console.log(`  - 其余 ${report.aiFails.length - 5} 条同类，不再列出`);
+    }
+  } else {
+    console.log('未启用 AI，全部按规则判定。');
+  }
+  if (report.retried) console.log(`本轮有 ${report.retried} 条没处理成，已放入重试队列，下一轮优先重试。`);
+  if (retryQueue.length) console.log(`重试队列现有 ${retryQueue.length} 条。`);
+
+  if (report.errors.length) {
+    console.log('异常：');
+    report.errors.forEach((e) => console.log('  - ' + e));
+  }
+
+  return report;
 }
 
-main();
+function createTransport() {
+  const nodemailer = require('nodemailer');
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.qq.com',
+    port: Number(process.env.SMTP_PORT || 465),
+    secure: true,
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+  });
+}
+
+/**
+ * 运行异常告警：用户不会去看 Actions 日志，出问题必须推到手机上
+ */
+async function sendAlert(subject, lines) {
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) return false;
+  const transporter = createTransport();
+  const to = process.env.MAIL_TO || process.env.SMTP_USER;
+  const html = `<div style="background:#f6f7f9;padding:16px;font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif">
+  <div style="max-width:640px;margin:0 auto">
+    <div style="background:#fff;border:1px solid #e6e8eb;border-left:4px solid #b42318;border-radius:10px;padding:14px 16px">
+      <div style="font-size:16px;font-weight:600;color:#b42318;margin-bottom:8px">${render.esc(subject)}</div>
+      <ul style="margin:0;padding-left:18px;font-size:14px;color:#374151;line-height:1.9">
+        ${lines.map((l) => `<li>${render.esc(l)}</li>`).join('')}
+      </ul>
+      <div style="font-size:12px;color:#6b7280;margin-top:10px">这条是系统自检报告，不是新通知。修好前每轮都会再检查一次。</div>
+    </div>
+  </div>
+</div>`;
+  await transporter.sendMail({ from: process.env.SMTP_USER, to, subject: `【运行异常】${subject}`, html });
+  return true;
+}
+
+async function sendMail(items) {
+  const transporter = createTransport();
+  const to = process.env.MAIL_TO || process.env.SMTP_USER;
+  const html = render.mailHtml(items, config);
+  const today = new Date().toLocaleDateString('zh-CN');
+  // 有 4 星及以上的，标题前缀换成需要处理，手机通知栏一眼能看出轻重
+  const urgent = items.filter((n) => Number(n.score) >= 4).length;
+  const prefix = urgent ? `【需要处理 ${urgent} 条】` : '【学院信息】';
+  await transporter.sendMail({
+    from: process.env.SMTP_USER,
+    to,
+    subject: `${prefix}${today} 新通知 ${items.length} 条`,
+    html,
+  });
+}
+
+if (require.main === module) {
+  main().catch((e) => {
+    console.error('运行失败：', e.message);
+    process.exit(1);
+  });
+}
+
+module.exports = { main, sendMail, processOne };  // processOne 导出仅用于排查单条判定

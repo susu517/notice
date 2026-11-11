@@ -1,10 +1,16 @@
 {
-  "name": "notice-ai",
+  "name": "notice",
   "version": "1.0.0",
-  "type": "module",
+  "private": true,
+  "description": "学院信息筛选助手 · 自动检测 + 结构提炼 + 网页留档",
+  "main": "monitor.js",
+  "scripts": {
+    "run": "node monitor.js",
+    "render": "node render.js"
+  },
   "dependencies": {
-    "cheerio": "^1.0.0-rc.12",
-    "node-fetch": "^3.3.2",
-    "nodemailer": "^6.9.7"
+    "cheerio": "^1.0.0",
+    "jsdom": "^31.0.0",
+    "nodemailer": "^6.9.13"
   }
 }

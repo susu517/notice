@@ -1,82 +1,1449 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>学院信息筛选助手</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
-        body { background-color: #f0f3f8; color: #333; padding-bottom: 50px; }
-        .header { background: linear-gradient(135deg, #0a1628, #1b356b); color: #fff; padding: 35px 20px; text-align: center; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; box-shadow: 0 4px 15px rgba(10, 22, 40, 0.3); }
-        .header h1 { font-size: 26px; margin-bottom: 8px; letter-spacing: 1px; }
-        .header p { font-size: 14px; color: #8eb4f0; }
-        .container { max-width: 800px; margin: 20px auto; padding: 0 15px; }
-        .tabs { display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; }
-        .tab { padding: 8px 18px; background: #fff; border-radius: 20px; font-size: 14px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); white-space: nowrap; color: #555; transition: all 0.2s; }
-        .tab.active { background: #0a1628; color: #fff; font-weight: bold; box-shadow: 0 4px 10px rgba(10, 22, 40, 0.3); }
-        .card { background: #fff; border-radius: 12px; padding: 22px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); position: relative; overflow: hidden; }
-        .card::before { content: ''; position: absolute; left: 0; top: 20px; bottom: 20px; width: 5px; background: #1b356b; border-radius: 0 4px 4px 0; }
-        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        .tag-cat { background: #e6f0ff; color: #0a1628; padding: 5px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; }
-        .tag-tags { display: flex; gap: 6px; }
-        .tag-item { background: #f1f3f4; color: #666; padding: 4px 8px; border-radius: 6px; font-size: 12px; }
-        .score { color: #fbbc04; font-size: 16px; }
-        .title { font-size: 18px; font-weight: bold; margin-bottom: 12px; line-height: 1.5; color: #0a1628; }
-        .summary { font-size: 14px; color: #555; margin-bottom: 15px; background: #f8faff; padding: 12px; border-radius: 8px; border-left: 3px solid #8eb4f0; }
-        .meta { font-size: 13px; color: #888; margin-bottom: 12px; display: flex; gap: 15px; }
-        .meta span::before { content: '•'; margin-right: 5px; }
-        .points { font-size: 14px; color: #333; margin-bottom: 15px; padding-left: 20px; }
-        .points li { margin-bottom: 6px; line-height: 1.5; }
-        .footer { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #aaa; border-top: 1px solid #eee; padding-top: 12px; margin-top: 10px; }
-        .link { color: #1b356b; text-decoration: none; font-weight: bold; }
-        .empty { text-align: center; padding: 60px 0; color: #999; font-size: 15px; }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>学院信息筛选助手</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:#f0f3f8;color:#1a2332;line-height:1.65;-webkit-text-size-adjust:100%}
+.wrap{max-width:860px;margin:0 auto;padding:0 16px 82px}
+header{margin:0 -16px;padding:26px 20px 22px;background:linear-gradient(135deg,#0a1628 0%,#122a52 55%,#1b356b 100%);border-radius:0 0 20px 20px;box-shadow:0 6px 20px rgba(10,22,40,.18);position:relative;overflow:hidden}
+header:after{content:"";position:absolute;right:-60px;top:-60px;width:180px;height:180px;background:radial-gradient(circle,rgba(120,170,255,.16),transparent 70%);border-radius:50%}
+h1{font-size:22px;letter-spacing:.4px;margin-bottom:7px;color:#fff;font-weight:700}
+.meta{color:#a8c0e8;font-size:12.5px}
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:60;display:flex;background:rgba(255,255,255,.97);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-top:1px solid #e3e9f2;box-shadow:0 -3px 16px rgba(10,22,40,.07);padding:6px 0 calc(6px + env(safe-area-inset-bottom))}
+.tab{flex:1 1 0;min-width:0;position:relative;padding:8px 1px 7px;background:none;border:0;font-size:12px;font-weight:600;color:#7d8899;text-align:center;white-space:nowrap;cursor:pointer;transition:color .16s ease;font-family:inherit}
+.tab.on{color:#12295c;background:none;box-shadow:none}
+.tab.on:before{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);width:22px;height:2.5px;border-radius:2px;background:linear-gradient(90deg,#0a1628,#1b356b)}
+.badge{display:inline-block;min-width:15px;padding:0 4px;margin-left:2px;background:#e8effc;color:#12295c;border-radius:8px;font-size:10px;line-height:15px;text-align:center;vertical-align:1px}
+.tab.on .badge{background:#12295c;color:#fff}
+.morelist{display:flex;flex-direction:column;gap:10px}
+.mrow{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;background:#fff;border:0;border-radius:12px;box-shadow:0 2px 10px rgba(10,22,40,.07);padding:14px 16px;cursor:pointer;font-family:inherit}
+.mrow:active{background:#f6f9fe}
+.mt{font-size:14.5px;font-weight:700;color:#0f2a63}
+.md{font-size:12px;color:#8a95a8}
+.backbar{margin-bottom:10px}
+.back{background:#fff;border:1px solid #d5ddea;color:#45536b;font-size:13px;font-weight:600;padding:7px 14px;border-radius:9px;cursor:pointer;font-family:inherit}
+.back:active{background:#eef3ff}
+.pane{display:none}
+.pane.on{display:block}
+.filters{display:flex;gap:8px;overflow-x:auto;padding:4px 0 12px;-webkit-overflow-scrolling:touch}
+.chip{flex:0 0 auto;padding:7px 13px;border-radius:999px;background:#fff;border:1px solid #d5ddea;color:#45536b;font-size:13px;cursor:pointer;white-space:nowrap}
+.chip.on{background:linear-gradient(135deg,#122a52,#1b356b);border-color:#1b356b;color:#fff}
+.card{position:relative;background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(10,22,40,.07),0 1px 2px rgba(10,22,40,.04);padding:15px 15px 13px 20px;margin-bottom:13px;overflow:hidden;cursor:pointer;transition:box-shadow .18s ease}
+.card.open{box-shadow:0 4px 18px rgba(10,22,40,.12)}
+.chint{font-size:11.5px;color:#9aa4b5;margin-top:9px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.prepts{margin-top:8px}
+.presum{margin-top:7px;font-size:12.8px;color:#5f6b80;line-height:1.66;background:#f8faff;border-left:3px solid #4a78c8;padding:7px 10px;border-radius:6px}
+.prep{font-size:12.5px;color:#43506a;line-height:1.62;margin:0 0 5px;padding-left:9px;border-left:2px solid #dbe6f8}
+.preptip{font-size:11px;color:#a6b0c2;margin-top:2px}
+.prep.muted{color:#9aa4b5;border-left-color:#e7ecf5}
+.push.mini{font-size:11px;padding:4px 11px;margin:0;border-radius:7px}
+.nofull{margin-top:8px;font-size:12px;color:#98a3b6;background:#fafbfd;border:1px dashed #dfe6f2;border-radius:8px;padding:9px 12px;text-align:center}
+.chint .t-close{display:none}
+.card.open .chint .t-open{display:none}
+.card.open .chint .t-close{display:inline}
+.cbody{display:none}
+.card.open .cbody{display:block}
+.sum{margin-top:12px}
+.card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(180deg,#0a1628,#1b356b)}
+.tagrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:9px}
+.cat{background:#e8effc;color:#12295c;font-size:12px;padding:3px 9px;border-radius:6px;font-weight:600;letter-spacing:.3px}
+.score{color:#1b356b;font-size:14px;letter-spacing:1.5px;margin-left:auto}
+.card.s5 .score{color:#b42318}
+.free{font-size:11.5px;color:#12295c;background:#eef3ff;border:1px solid #cbd9f5;border-radius:10px;padding:1px 7px;line-height:1.6}
+.eng{color:#12295c}
+.src{color:#9aa4b5;font-size:11.5px;margin-left:auto}
+h2{font-size:15.5px;line-height:1.5;font-weight:700;color:#0f2a63;margin-bottom:9px}
+.sum{background:#f5f7fb;border-left:3px solid #4a78c8;border-radius:0 7px 7px 0;padding:9px 11px;font-size:13px;color:#4a566d;margin-bottom:9px;line-height:1.6}
+.meta2{font-size:11.5px;color:#8a95a8;margin-bottom:10px;line-height:1.7}
+.meta2 .time{display:inline;background:none;border:0;padding:0;margin:0;color:#5b6b85;font-weight:600;font-size:11.5px}
+.time{display:inline-block;background:#e6eeff;color:#0a2158;border:1px solid #b8cdf5;font-size:13px;padding:5px 10px;border-radius:8px;margin-bottom:10px;line-height:1.5}
+ul.points{list-style:none;padding:0}
+ul.points li{position:relative;padding-left:15px;margin-bottom:5px;font-size:13px;color:#374151;line-height:1.75}
+ul.points li:before{content:"";position:absolute;left:3px;top:9px;width:5px;height:5px;background:#4a78c8;border-radius:50%}
+ul.points li.muted{color:#9aa4b5}
+ul.points li.muted:before{background:#d1d5db}
+details.full{margin-top:4px}
+details.full summary{display:block;cursor:pointer;list-style:none;text-align:center;font-size:12.5px;font-weight:600;color:#12295c;background:#f2f6fd;border:1px solid #dbe6f8;border-radius:8px;padding:8px 0}
+details.full summary::-webkit-details-marker{display:none}
+details.full .t-close{display:none}
+details.full[open] .t-open{display:none}
+details.full[open] .t-close{display:inline}
+details.full p{margin-top:8px;font-size:13px;color:#4b5563;line-height:1.75;white-space:pre-wrap;background:#f8fafd;border-radius:8px;padding:10px 12px}
+.acts{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding-top:10px;border-top:1px solid #eff2f7}
+.fetched{font-size:11px;color:#9aa4b5;white-space:nowrap}
+.btn-link{display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,#122a52,#1b356b);color:#fff;font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:8px;text-decoration:none;box-shadow:0 3px 9px rgba(27,53,107,.22);white-space:nowrap}
+.btn-link:hover{opacity:.92}
+.link{display:inline-block;margin-top:10px;font-size:13px;color:#0f2a63;text-decoration:none}
+.rawurl{display:block;margin-top:6px;font-size:11px;color:#b0b8c6;word-break:break-all;line-height:1.5;text-decoration:none}
+.arcbar{font-size:12px;color:#8a95a8;line-height:1.6}
+.arcbar b{color:#12295c;font-size:14px;margin:0 2px}
+.qinput{width:100%;padding:9px 12px;border:1px solid #d5ddea;border-radius:9px;font-size:13.5px;outline:none;background:#fff;color:#333}
+.link:hover{text-decoration:underline}
+.row{display:flex;gap:12px;align-items:flex-start;background:#fff;border-radius:10px;box-shadow:0 1px 6px rgba(10,22,40,.06);padding:12px 14px;margin-bottom:9px}
+.rowmain{flex:1;min-width:0}
+.rowdate{font-size:12px;color:#9aa4b5}
+.rowtitle{font-size:14.5px;font-weight:600;line-height:1.5;color:#0f2a63;margin:2px 0 4px;word-break:break-word}
+.rowmeta{font-size:12px;color:#8a95a8}
+.rowact{margin-top:12px;border-top:1px dashed #e6ebf3;padding-top:10px;text-align:right}
+.del,.rest{flex:0 0 auto;font-size:11.5px;padding:5px 9px;border-radius:8px;border:1px solid #d5ddea;background:#fff;color:#6b7280;cursor:pointer;white-space:nowrap}
+.del:hover{border-color:#fca5a5;color:#dc2626}
+.push{flex:0 0 auto;font-size:11.5px;padding:5px 9px;border-radius:8px;border:1px solid #b8cdf5;background:#fff;color:#12295c;cursor:pointer;white-space:nowrap;margin-right:8px}
+.push:hover{background:#eef3ff}
+.push:disabled{opacity:.55;cursor:default}
+.purge{flex:0 0 auto;font-size:11.5px;padding:5px 9px;border-radius:8px;border:1px solid #fca5a5;background:#fff;color:#dc2626;cursor:pointer;white-space:nowrap;margin-left:8px}
+.purge:hover{background:#fef2f2}
+.toast{position:fixed;left:50%;bottom:78px;transform:translateX(-50%);max-width:88%;background:#0a1628;color:#fff;font-size:13.5px;line-height:1.6;padding:11px 16px;border-radius:10px;z-index:99;display:none;box-shadow:0 6px 20px rgba(0,0,0,.18)}
+.toast.on{display:block}
+.toast.err{background:#b91c1c}
+.toast.ok{background:#047857}
+.rest:hover{border-color:#86efac;color:#059669}
+.box{background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(10,22,40,.07);padding:16px 18px;margin-bottom:13px}
+.box h3{font-size:15px;color:#0f2a63;margin-bottom:8px}
+.box p{font-size:13.5px;color:#4b5563;margin-bottom:6px}
+input[type=password],input[type=number],input[type=text]{border:1px solid #d5ddea;border-radius:9px;padding:9px 11px;font-size:14px;font-family:inherit;background:#f8fafd;color:#1a2332}
+textarea{width:100%;min-height:92px;border:1px solid #d5ddea;border-radius:10px;padding:10px 12px;font-size:14px;font-family:inherit;line-height:1.6;resize:vertical;background:#f8fafd;color:#1a2332}
+.btn{display:inline-block;margin-top:10px;padding:9px 16px;background:linear-gradient(135deg,#122a52,#1b356b);color:#fff;border:none;border-radius:9px;font-size:13.5px;cursor:pointer;font-family:inherit}
+.btn.ghost{background:#fff;color:#45536b;border:1px solid #d5ddea}
+.hint{font-size:12.5px;color:#8a95a8;line-height:1.75;margin-top:8px}
+table.site{width:100%;border-collapse:collapse;font-size:13px}
+table.site th,table.site td{text-align:left;padding:7px 8px;border-bottom:1px solid #eff2f7}
+table.site th{color:#8a95a8;font-weight:500}
+.empty{text-align:center;color:#9aa4b5;padding:50px 20px;font-size:14px}
+footer{text-align:center;color:#9aa4b5;font-size:12px;margin-top:30px}
+@media(max-width:480px){.wrap{padding:0 10px 86px}header{margin:0 -10px;padding:22px 16px 20px}h1{font-size:20px}h2{font-size:15px}ul.points li{font-size:12.8px}.rowtitle{font-size:14px}}
+</style>
 </head>
 <body>
-    <div class="header">
-        <h1>🎓 学院信息筛选助手</h1>
-        <p>由 AI 大模型为您自动提炼校园通知</p>
+<div class="wrap">
+  <header>
+    <h1>学院信息筛选助手</h1>
+    <div class="meta">浙江工商大学 食品与生物工程学院 · 最后更新 2026/11/11 20:56:52</div>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <div class="tab on" data-tab="screen">学院<span class="badge" id="bScreen">0</span></div>
+    <div class="tab" data-tab="contest">竞赛<span class="badge" id="bContest">0</span></div>
+    <div class="tab" data-tab="exam">考试<span class="badge" id="bExam">0</span></div>
+    <div class="tab" data-tab="lecture">讲座<span class="badge" id="bLecture">0</span></div>
+    <div class="tab" data-tab="important">重要<span class="badge" id="bImportant">0</span></div>
+    <div class="tab" data-tab="add">提取</div>
+    <div class="tab" data-tab="archive">留档<span class="badge" id="bArchive">0</span></div>
+  </nav>
+
+  <div class="pane" id="pane-add">
+    <div class="backbar"><button class="back" onclick="switchTab('archive')">← 返回</button></div>
+    <div class="box">
+      <h3>手动输入内容并提炼</h3>
+      <p>把通知文字整段贴进来，用和自动抓取完全一样的一套口径现场提炼：分类、星级、时间、要点。</p>
+      <input type="text" id="manTitle" placeholder="标题（可留空，会取正文第一行）" style="width:100%;margin-bottom:8px">
+      <textarea id="manBody" placeholder="正文内容贴在这里…"></textarea>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px">
+        <button class="btn" id="manRun" style="margin:0">提炼</button>
+        <button class="btn ghost" id="manCopy" style="display:none;margin:0">复制提炼结果</button>
+      </div>
     </div>
-    <div class="container">
-        <div class="tabs" id="tabs">
-            <div class="tab active" data-cat="全部">全部</div>
-            <div class="tab" data-cat="竞赛">竞赛</div>
-            <div class="tab" data-cat="教务考试">考试</div>
-            <div class="tab" data-cat="讲座报告">讲座</div>
-            <div class="tab" data-cat="评奖资助">评奖</div>
-        </div>
-        <div id="list"></div>
+    <div id="manResult"></div>
+    <div class="box">
+      <h3>识别网址</h3>
+      <p>贴一个通知文章链接，自动抓正文并按同一套口径提炼。走 GitHub 抓取，大约等 1 分钟。</p>
+      <input type="text" id="urlInput" placeholder="https://spxy.zjgsu.edu.cn/?news/7134.html" style="width:100%">
+      <div style="margin-top:10px"><button class="btn" id="urlRun" style="margin:0">识别这个网址</button></div>
+      <div class="hint" id="urlStatus">抓不到正文时会显示抓到了多少字，方便判断是链接不对还是正文在附件里。</div>
     </div>
-    <script>
-        let allData = []; let currentCat = '全部';
-        fetch('./notices.json').then(res => res.json()).then(data => { allData = data || []; render(); }).catch(err => { document.getElementById('list').innerHTML = '<div class="empty">暂无数据，请等待系统抓取...</div>'; });
-        document.getElementById('tabs').addEventListener('click', (e) => {
-            if (e.target.classList.contains('tab')) {
-                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                e.target.classList.add('active'); currentCat = e.target.getAttribute('data-cat'); render();
-            }
-        });
-        function render() {
-            const list = document.getElementById('list');
-            const filtered = currentCat === '全部' ? allData : allData.filter(item => item.category && item.category.includes(currentCat));
-            if (filtered.length === 0) { list.innerHTML = '<div class="empty">该分类下暂无通知</div>'; return; }
-            list.innerHTML = filtered.map(item => `
-                <div class="card">
-                    <div class="card-header">
-                        <div style="display:flex; gap:8px; align-items:center;">
-                            <span class="tag-cat">${item.category || '其他'}</span>
-                            <div class="tag-tags">${(item.custom_tags || []).map(t => `<span class="tag-item">#${t}</span>`).join('')}</div>
-                        </div>
-                        <span class="score">${'★'.repeat(item.score || 0)}${'☆'.repeat(5 - (item.score || 0))}</span>
-                    </div>
-                    <div class="title">${item.title}</div>
-                    <div class="summary">${item.summary || '暂无摘要'}</div>
-                    <div class="meta"><span>来源: ${item.site || '未知'}</span><span>时间: ${item.event_time || '未提及'}</span></div>
-                    <ul class="points">${(item.key_points || []).map(p => `<li>${p}</li>`).join('')}</ul>
-                    <div class="footer"><span>抓取于 ${item.published_at || '近期'}</span><a href="${item.url}" target="_blank" class="link">查看原文 →</a></div>
-                </div>
-            `).join('');
-        }
-    </script>
+    <div id="urlResult"></div>
+    <div class="box">
+      <h3>粘贴公众号文章链接</h3>
+      <p>把公众号文章的链接贴进来，一行一条，可以先存成待处理清单。</p>
+      <textarea id="draftInput" placeholder="https://mp.weixin.qq.com/s/..."></textarea>
+      <button class="btn" id="draftSave">存进待处理清单</button>
+      <button class="btn ghost" id="draftCopy">复制全部链接</button>
+      <div class="hint">
+        说明：公众号按名字自动识别做不到（搜狗微信搜索被反爬拦截、第三方 RSS 服务 12 秒超时）。
+        这里先做手动粘贴。要自动抓正文并入库，需要接 Supabase 做后端，那一步等配置好再做。
+      </div>
+    </div>
+    <div class="box">
+      <h3>待处理清单<span class="badge" id="bDraft">0</span></h3>
+      <div id="draftList"></div>
+    </div>
+  </div>
+
+  <div class="pane on" id="pane-screen">
+    <div class="box" style="padding:10px 12px"><input class="qinput" id="q" type="search" placeholder="搜索标题、摘要、时间、要点" autocomplete="off"></div>
+    <div class="filters" id="filters"></div>
+    <div id="list"></div>
+  </div>
+
+  <div class="pane" id="pane-contest">
+    <div class="box" style="padding:12px 14px">
+      <div class="hint" style="margin:0">竞赛类：竞赛报名、选拔、赛程、组队、培训、获奖公示，以及大创、科研训练、创新创业项目。</div>
+    </div>
+    <div id="contestList"></div>
+  </div>
+
+  <div class="pane" id="pane-exam">
+    <div class="box" style="padding:12px 14px">
+      <div class="hint" style="margin:0">考试类：课程考试安排、缓考补考重修、成绩复核，以及四六级、计算机、普通话、教资等证件考试报名。</div>
+    </div>
+    <div id="examList"></div>
+  </div>
+
+  <div class="pane" id="pane-lecture">
+    <div class="box" style="padding:12px 14px">
+      <div class="hint" style="margin:0">讲座类：学术报告、实务导师进课堂、经验分享会的时间、地点、主讲人与参加方式。</div>
+    </div>
+    <div id="lectureList"></div>
+  </div>
+
+  <div class="pane" id="pane-important">
+    <div class="box" style="padding:12px 14px">
+      <div class="hint" style="margin:0">重要类：能加分、有奖金、评优评先的事（竞赛类另有专门页签）。包括奖学金助学金、评奖评优、困难认定、勤工助学、综合素质测评加分认定。</div>
+    </div>
+    <div id="importantList"></div>
+  </div>
+
+  <div class="pane" id="pane-sites">
+    <div class="backbar"><button class="back" onclick="switchTab('archive')">← 返回</button></div>
+    <div class="box">
+      <h3>加入常用网址</h3>
+      <p>加进来的栏目会进定时抓取清单，从下一轮检查开始生效。</p>
+      <input type="text" id="siteName" placeholder="栏目名，比如「学院科研」" style="width:100%;margin-bottom:8px">
+      <input type="text" id="siteUrl" placeholder="栏目列表页地址 https://..." style="width:100%">
+      <div style="margin-top:10px"><button class="btn" id="siteAdd" style="margin:0">加入常用网址</button></div>
+      <div class="hint" id="siteStatus">网址要填栏目的列表页（能看到一排通知标题的那一页），不是某一篇文章。</div>
+    </div>
+    <div class="box">
+      <h3>正在监控的网址<span class="badge" id="bSites2">0</span></h3>
+      <table class="site" id="siteTable"></table>
+      <div class="hint">推送里的每条通知都来自上面这些网址之一，卡片上的「来源」标注的就是栏目名。</div>
+    </div>
+  </div>
+
+  <div class="pane" id="pane-archive">
+    <div class="box" style="padding:12px 14px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn ghost" style="margin:0;flex:1;padding:8px 6px;font-size:12.5px" onclick="switchTab('sites')">常用网址<span class="badge" id="bSites">0</span></button>
+        <button class="btn ghost" style="margin:0;flex:1;padding:8px 6px;font-size:12.5px" onclick="switchTab('trash')">回收站<span class="badge" id="bTrash">0</span></button>
+        <button class="btn ghost" style="margin:0;flex:1;padding:8px 6px;font-size:12.5px" onclick="switchTab('settings')">设置</button>
+      </div>
+    </div>
+    <div class="box" style="padding:12px 14px">
+      <div class="arcbar" id="arcbar"></div>
+      <div class="hint" style="margin:6px 0 0">留档按发布时间从新到旧排列。删除会先移到回收站，可以再恢复。</div>
+    </div>
+    <div id="archiveList"></div>
+  </div>
+
+  <div class="pane" id="pane-trash">
+    <div class="backbar"><button class="back" onclick="switchTab('archive')">← 返回</button></div>
+    <div class="box" style="padding:12px 14px">
+      <div class="hint" style="margin:0">这里的记录从留档库删掉了，点恢复可以放回去。</div>
+    </div>
+    <div id="trashList"></div>
+  </div>
+
+  <div class="pane" id="pane-settings">
+    <div class="backbar"><button class="back" onclick="switchTab('archive')">← 返回</button></div>
+    <div class="box">
+      <h3>推送邮箱</h3>
+      <p>填一次就行。之后点每条通知右上角的「推送」，手机会直接打开邮件 App，标题和内容都已经填好，按发送即可。不需要申请 GitHub Token。</p>
+      <div><input type="email" id="pushMail" placeholder="你的邮箱，例如 123456@qq.com" style="width:100%"></div>
+      <div class="hint">只存在这台手机里，不会写进网页。</div>
+    </div>
+    <div class="box">
+      <h3>推送</h3>
+      <p>邮件推送：每 30 分钟检查一次，有新的重要通知才发信，没有新通知不发。</p>
+      <p>收件邮箱和发件邮箱在 GitHub 仓库的 Settings → Secrets 里配置（SMTP_USER / SMTP_PASS / MAIL_TO）。</p>
+    </div>
+    <div class="box">
+      <h3>导出备份</h3>
+      <p>把留档库里所有数据存成一个 JSON 文件。换手机、清浏览器、或者手滑清空之后，靠这个文件能把标题、分类、时间、要点、原文链接都找回来。</p>
+      <button class="btn" onclick="exportBackup()">导出留档备份</button>
+      <div class="hint">浏览器会把它存到手机的「下载」目录。</div>
+    </div>
+    <div class="box">
+      <h3>监视范围</h3>
+      <p>正在监控的网址在「常用网址」板块，那里也能直接加新栏目。</p>
+      <p>新加的栏目第一次检查只登记已有通知，不推送历史，从第二次才开始推新的。</p>
+    </div>
+    <div class="box">
+      <h3>留档与删除</h3>
+      <p>数据存在仓库的 data/notices.json 里，每次抓完自动提交，不会丢。</p>
+      <p>留档库的「删除」只是移进回收站（本地记录）；回收站的「彻底删除」会同时把这条从仓库的 data/notices.json 里删掉，之后不会再出现。</p>
+      <p>彻底删除需要 Token 勾上 <b>Contents: Read and write</b> 权限；没填 Token 时只在本机隐藏。</p>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <footer>每 2 小时自动检查官网栏目 · 数据存在自己的仓库里</footer>
+</div>
+<script>/**
+ * 学院信息筛选引擎（零依赖，可在 GitHub Actions 里直接跑）
+ *
+ * 判断口径（用户定稿）：
+ *   总原则 —— 是否需要学生采取行动、是否影响学业进度/资格身份/安全、是否有明确时间点
+ *   保留 18 类；忽略社团招新、日常活动宣传、节日问候、纯获奖喜报、活动总结、新闻稿、
+ *   已过期通知、与学业无关的商业广告、校外培训推销
+ *
+ * 时间显示口径（用户定稿）：
+ *   有区间就写区间；报名时间也保留；一条里多个时间段时并列展示，每段标出它是什么时间
+ *   例：报名 11月1日—11月10日；初赛 11月15日；决赛 11月25日
+ */
+
+const CATEGORIES = [
+  '竞赛', '教务考试', '选课学籍', '评奖资助', '缴费注册', '实习就业', '保研考研',
+  '交流交换', '科研创新', '论文答辩', '实验安全', '讲座报告', '党团实践', '安全后勤',
+  '健康医保', '证件考试', '毕业离校', '其他重要',
+];
+
+// 分类关键词：标题命中权重 10，正文命中权重 2
+const CATEGORY_RULES = [
+  ['竞赛', ['竞赛', '大赛', '比赛', '杯赛', '挑战赛', '选拔赛', '创新创业大赛', '创新创业项目', '揭榜挂帅', '作品征集', '初赛', '决赛']],
+  ['教务考试', ['考试', '期末考试', '监考', '补考', '缓考', '重修', '成绩', '阅卷', '答题卡']],
+  ['选课学籍', ['选课', '退课', '补选', '学籍', '转专业', '辅修', '双学位', '注册', '学分', '培养方案']],
+  ['评奖资助', ['奖学金', '助学金', '评奖', '评优', '三好学生', '困难认定', '勤工助学', '助学贷款', '励志']],
+  ['缴费注册', ['学费', '住宿费', '缴费', '收费', '缴纳', '报到', '注册']],
+  ['实习就业', ['招聘', '就业', '实习', '宣讲', '双选', '三方协议', '就业推荐', '岗位', '校企', 'offer']],
+  ['保研考研', ['推免', '保研', '夏令营', '考研', '研究生招生', '复试', '初试', '调剂']],
+  ['交流交换', ['交换', '交流', '联合培养', '出国', '留学', '访学', '境外']],
+  ['科研创新', ['大创', '科研', '创新项目', '课题', '立项', '结题', '创新创业项目', '基金', '实验项目']],
+  ['论文答辩', ['开题', '中期检查', '查重', '送审', '答辩', '论文', '毕设', '课程报告']],
+  ['实验安全', ['实验室', '实验课', '试剂', '危化品', '安全培训', '准入', '设备使用', '实验教学']],
+  ['讲座报告', ['讲座', '报告会', '沙龙', '论坛', '学术报告', '分享会', '实务导师进班级', '实务精英进课堂']],
+  ['党团实践', ['入党', '入团', '党课', '团课', '团校', '志愿服务', '社会实践', '团员', '党员', '推优']],
+  ['安全后勤', ['消防', '演练', '停水', '停电', '施工', '宿舍', '食堂', '校车', '门禁', '安全隐患', '安全检查', '安全专项']],
+  ['健康医保', ['医保', '体检', '疫苗', '传染病', '心理健康', '就医', '门诊']],
+  ['证件考试', ['学生证', '四六级', '英语四级', '六级', '计算机等级', '普通话', '教师资格', '征兵', '档案', '户口']],
+  ['毕业离校', ['毕业', '离校', '学位', '毕业审核', '就业报到', '档案转递', '毕业典礼']],
+];
+
+// 直接忽略的类型：标题命中即丢弃（喜报、活动总结、新闻稿这类从标题就能看出来）
+const SKIP_TITLE = [
+  /社团招新|社团纳新|招新公告|纳新啦/,
+  /节日快乐|佳节|除夕|中秋快|新春|教师节快乐/,
+  /喜报|热烈祝贺|再获佳绩|斩获|荣获|获奖情况通报|再创佳绩/,
+  /圆满结束|顺利结束|成功举办|顺利举办|圆满举办|总结大会|活动总结|侧记|纪实|回顾/,
+  /新闻稿|通讯员报道|接受采访/,
+  /开展.?(?:专题)?宣讲|专题宣讲|宣讲活动|走进|面对面|暖心|护航/,
+  /校外培训|培训班招生|速成班|包就业|学历提升|兼职招聘/,
+];
+
+// 正文命中即丢弃（只放确实是宣传稿、推销稿的表达，避免误杀正文里顺带提一句的通知）
+const SKIP_BODY = [
+  /社团招新|社团纳新/,
+  /校外培训|培训班招生|速成班|包就业|学历提升|兼职招聘/,
+  /圆满结束|顺利结束|成功举办|顺利举办|圆满举办|活动总结|侧记|纪实/,
+  /取得优异成绩|展现.{0,8}风貌|圆满落幕|精彩瞬间|再获佳绩|获得.{0,6}(?:一等奖|二等奖|三等奖|金奖|银奖)/,
+];
+
+// 教职工事务，学生无关
+const STAFF_RULES = [
+  /教职工|全体教师|专任教师|教师大会|师德|师资培训|教学能力比赛|教代会/,
+  /党委会|党政联席|院长办公会|中层干部|教代会|工会委员会/,
+  /各位老师：|全体老师：/,
+];
+
+/* ==================== 分类 ==================== */
+
+function pickCategory(title, body) {
+  const t = String(title || '');
+  const b = String(body || '').slice(0, 3000);
+  const scores = new Map();
+
+  for (const [cat, words] of CATEGORY_RULES) {
+    let s = 0;
+    for (const w of words) {
+      if (t.includes(w)) s += 10;
+      else if (b.includes(w)) s += 2;
+    }
+    if (s > 0) scores.set(cat, s);
+  }
+  if (!scores.size) return '其他重要';
+
+  let best = '其他重要';
+  let bestScore = 0;
+  for (const [cat, s] of scores) {
+    if (s > bestScore) { best = cat; bestScore = s; }
+  }
+  return bestScore >= 4 ? best : '其他重要';
+}
+
+/* ==================== 时间抽取 ==================== */
+
+// 月份、日期都用捕获组，方便直接取数值
+const MON = '(1[0-2]|0?[1-9])';
+const DAY = '(3[01]|[12]\\d|0?[1-9])';
+const YR = '(?:(20\\d{2})年)?';
+
+// 区间：11月1日—11月10日 / 11月1日至10日 / 2026年11月1日-2026年11月10日
+const RANGE_RE = new RegExp(
+  `${YR}${MON}\\s*月\\s*${DAY}\\s*日?` +
+  `(?:\\s*[（(][^）)]{0,8}[）)])?\\s*` +
+  `(?:—|–|-|~|～|至|到)\\s*` +
+  `${YR}${MON}\\s*月\\s*${DAY}\\s*日`,
+  'g'
+);
+
+// 单点：11月15日 上午8:05 / 2026年11月20日17:00
+const POINT_RE = new RegExp(
+  `${YR}${MON}\\s*月\\s*${DAY}\\s*日` +
+  `(?:\\s*[（(][^）)]{0,10}[）)])?` +
+  `(?:\\s*(?:上午|下午|中午|晚上|傍晚)?\\s*\\d{1,2}\\s*[:：]\\s*\\d{2})?`,
+  'g'
+);
+
+// 前面的时间属于什么
+const LABEL_RULES = [
+  ['报名', /报名|申请|网上填报|提交报名/],
+  ['截止', /截止|截至|之前|以前|前完成|前提交/],
+  ['公示', /公示/],
+  ['初赛', /初赛|预赛|选拔赛/],
+  ['复赛', /复赛/],
+  ['决赛', /决赛|总决赛/],
+  ['笔试', /笔试/],
+  ['面试', /面试/],
+  ['答辩', /答辩/],
+  ['开题', /开题/],
+  ['培训', /培训|辅导|集训/],
+  ['讲座', /讲座|报告会|沙龙|论坛/],
+  ['活动', /活动|举行|举办|开展/],
+  ['检查', /检查|核查|清查|自查/],
+  ['报到', /报到|注册/],
+];
+
+function labelOf(text, index) {
+  // 只看日期前面一小段，并且取「离日期最近」的关键词
+  const before = text.slice(Math.max(0, index - 24), index);
+  let best = '';
+  let bestPos = -1;
+  for (const [label, re] of LABEL_RULES) {
+    const g = new RegExp(re.source, 'g');
+    let m;
+    while ((m = g.exec(before)) !== null) {
+      if (m.index > bestPos) { bestPos = m.index; best = label; }
+      if (m.index === g.lastIndex) g.lastIndex++;
+    }
+  }
+  if (best) return best;
+  // 「11月20日前报送」这类，日期后面紧跟「前」就是截止
+  const after = text.slice(index, index + 22);
+  if (/^[^。]{0,10}(?:之前|以前|前完成|前提交|前报送|前交|前报)/.test(after)) return '截止';
+  return '';
+}
+
+function normDate(raw, fallbackYear) {
+  // 统一成「11月15日」，同年省掉年份
+  const m = raw.match(new RegExp(`${YR}${MON}\\s*月\\s*${DAY}\\s*日?(?:\\s*[（(][^）)]{0,10}[）)])?` +
+    `(?:\\s*(?:上午|下午|中午|晚上|傍晚)?\\s*\\d{1,2}\\s*[:：]\\s*\\d{2})?`));
+  if (!m) return raw.replace(/\s+/g, '');
+
+  const year = m[1] || fallbackYear;
+  const month = String(m[2]).replace(/^0/, '');
+  const day = String(m[3]).replace(/^0/, '');
+  const tail = (m[0].match(/[（(][^）)]{0,10}[）)]/) || [''])[0]
+    + (m[0].match(/(?:上午|下午|中午|晚上|傍晚)?\s*\d{1,2}\s*[:：]\s*\d{2}/) || [''])[0];
+
+  const prefix = year ? `${year}年` : '';
+  return prefix + `${month}月${day}日` + tail.replace(/\s+/g, '');
+}
+
+/**
+ * 抽出所有时间段，返回 [{ label, text, index }]
+ * label 是「这段属于什么时间」（报名 / 初赛 / 决赛 / 公示 …），没有就留空
+ */
+function extractTimes(rawText) {
+  const text = String(rawText || '').replace(/\u00a0/g, ' ');
+  const items = [];
+  const covered = [];
+
+  // 1) 先抓区间
+  RANGE_RE.lastIndex = 0;
+  let m;
+  while ((m = RANGE_RE.exec(text)) !== null) {
+    const startPart = normDate(m[0].split(/—|–|-|~|～|至|到/)[0], m[1]);
+    const endPart = normDate(m[0].split(/—|–|-|~|～|至|到/).slice(1).join(''), m[4] || m[1]);
+    const label = labelOf(text, m.index);
+    items.push({ label, text: `${startPart} — ${endPart}`, index: m.index });
+    covered.push([m.index, m.index + m[0].length]);
+  }
+
+  // 2) 再抓单点（跳过已被区间覆盖的位置，以及和区间端点重复的日期）
+  POINT_RE.lastIndex = 0;
+  while ((m = POINT_RE.exec(text)) !== null) {
+    const inRange = covered.some(([a, b]) => m.index >= a && m.index < b);
+    if (inRange) continue;
+    const label = labelOf(text, m.index);
+    const norm = normDate(m[0], m[1]);
+    // 区间里已经写过的同一天，不再重复列
+    const dup = items.some((it) => it.text.includes(norm));
+    if (dup) continue;
+    items.push({ label, text: norm, index: m.index });
+  }
+
+  // 3) 按原文顺序排列，同一标签只留第一个
+  items.sort((a, b) => a.index - b.index);
+  const seen = new Map();
+  const out = [];
+  for (const it of items) {
+    const key = it.label || it.text;
+    if (seen.has(key)) continue;
+    seen.set(key, true);
+    out.push(it);
+  }
+  return out.slice(0, 4);
+}
+
+/**
+ * 生成展示用的时间字符串：多段并列，报名区间保留
+ * 例：报名 11月1日 — 11月10日；初赛 11月15日；决赛 11月25日
+ */
+function formatTimes(rawText) {
+  const times = extractTimes(rawText);
+  if (!times.length) return '';
+  return times
+    .map((t) => (t.label ? `${t.label} ${t.text}` : t.text))
+    .join('；');
+}
+
+/**
+ * 原文只写「1月5日」没写年份时推断是哪一年。
+ * 跨年最容易出事：12 月发的通知写「1月5日」，指的一定是明年。
+ * 若按今年算就成了已过去的日期，寒假注册、开学报到这类通知会被判过期直接丢掉。
+ * 做法：比当前月份早半年以上的，算明年。
+ */
+function inferYear(month, day, today) {
+  const nowMonth = today.getMonth() + 1;
+  if (month <= nowMonth - 6) return today.getFullYear() + 1;
+  return today.getFullYear();
+}
+
+/**
+ * 最晚的日期（用来判断是否已过期）
+ */
+function latestDate(rawText, now) {
+  const text = String(rawText || '');
+  const re = new RegExp(`${YR}${MON}\\s*月\\s*${DAY}\\s*日`, 'g');
+  const today = now || new Date();
+  let latest = null;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    const month = Number(m[2]);
+    const day = Number(m[3]);
+    const year = m[1] ? Number(m[1]) : inferYear(month, day, today);
+    const d = new Date(year, month - 1, day);
+    if (!latest || d > latest) latest = d;
+  }
+  return latest;
+}
+
+// 活动全部过去 20 天以上，视为过期
+function isExpired(rawText, now) {
+  const latest = latestDate(rawText, now);
+  if (!latest) return false;
+  const today = now || new Date();
+  return (today - latest) / 86400000 > 20;
+}
+
+/* ==================== 要点抽取 ==================== */
+
+const POINT_RULES = [
+  ['条件', /面向|对象|资格|条件|要求|限.*(年级|专业|学院)|在校|全日制|本科生|研究生|名额|年龄|须|必须|具备|优先/],
+  ['组队', /组队|团队|每队|队伍|队长|成员|人数|指导教师|指导老师|领队/],
+  ['内容', /讲座题目|主题|主讲人|主讲|嘉宾|专家|报告人|实务导师|实务精英|分享内容|内容简介|简介/],
+  ['材料', /材料|附件|报名表|申请表|推荐表|提交|报送|上传|发送至|盖章|签字|纸质|电子版|扫描件|身份证|成绩单/],
+  ['流程', /初赛|复赛|决赛|赛程|环节|阶段|流程|评审|答辩|公示|初选|终评|材料审核|面试|笔试/],
+  ['时间地点', /时间|地点|举行|举办|在.*(楼|室|厅|馆)|会议室|报告厅|线上|腾讯会议|钉钉|线下/],
+  ['报名', /报名|申请|联系|咨询|渠道|链接|二维码|邮箱|电话|QQ群|微信群|负责人|联系人/],
+];
+
+const POINT_QUOTA = { 条件: 2, 组队: 1, 内容: 2, 材料: 2, 流程: 2, 时间地点: 2, 报名: 2 };
+
+function splitSentences(text) {
+  const base = String(text || '')
+    .replace(/\r/g, '\n')
+    .replace(/\u00a0/g, ' ')
+    .split(/(?<=[。！？])|\n+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length >= 4)
+    // 「地点：B331」这类字段行只有两三个汉字，但信息很关键，单独放行
+    .filter((s) => {
+      const cn = (s.match(/[\u4e00-\u9fa5]/g) || []).length;
+      if (cn >= 6) return true;
+      return cn >= 2 && /^[\u4e00-\u9fa5A-Za-z]{2,8}[：:]/.test(s);
+    });
+
+  // 通知正文经常一整段只用一个句号，按逗号做二次切分，否则只能抽出 1 条要点
+  const out = [];
+  base.forEach((s) => {
+    if (s.length <= 60) { out.push(s); return; }
+    const parts = s.split(/(?<=[，,；;])/).map((x) => x.trim()).filter(Boolean);
+    let buf = '';
+    parts.forEach((p) => {
+      if (buf && (buf + p).length > 55) { out.push(buf); buf = p; }
+      else buf += p;
+    });
+    if (buf) out.push(buf);
+  });
+  return out;
+}
+
+function isNoisePoint(out) {
+  if (/^附件\s*[\d一二三四五六七八九十]/.test(out) && out.length < 30) return true;
+  if (/^关于.{2,40}(的通知|的公告|的公示|的函|的说明)[。.]?$/.test(out)) return true;
+  if (/(供稿|责编|编辑|审核|摄影|排版|校对)/.test(out) && out.length < 24) return true;
+  if (/^[〇零一二三四五六七八九十]{2,4}年.{0,4}月.{0,4}日$/.test(out)) return true;
+  // 正文里的小标题，单独抽出来没有任何信息量
+  if (out.length <= 12 && /(要求|安排|说明|如下|内容|标准|办法|规定|程序|流程|条件|范围|对象|时间|地点|方式)[。.]?$/.test(out)) return true;
+  return false;
+}
+
+function tidyPoint(s) {
+  let out = s.replace(/^[\s　]*(?:[（(][一二三四五六七八九十\d]+[）)]|\d+[.、．]|[一二三四五六七八九十]+[、.])\s*/, '');
+  out = out.replace(/\s+/g, ' ').trim().replace(/[，,、；;]+$/, '');
+  if (out.length > 50) {
+    const cut = out.slice(0, 48);
+    const pos = Math.max(cut.lastIndexOf('，'), cut.lastIndexOf('、'), cut.lastIndexOf('；'), cut.lastIndexOf('：'), cut.lastIndexOf('。'));
+    out = (pos >= 20 ? cut.slice(0, pos) : cut) + '…';
+  }
+  return out;
+}
+
+/**
+ * 按六个维度抽要点：先保证每个维度都有覆盖，再按原文顺序排列，背景句沉到最后
+ */
+function pickKeyPoints(rawText, limit) {
+  const max = limit || 10;
+  const sentences = splitSentences(rawText);
+  const cands = [];
+  const seenSig = new Set();
+
+  sentences.forEach((raw, idx) => {
+    const out = tidyPoint(raw);
+    if (!out) return;
+    if (isNoisePoint(out)) return;
+
+    // 打分：命中维度的句子优先
+    let bestTag = '';
+    let bestW = 0;
+    for (const [tag, re] of POINT_RULES) {
+      const hits = (out.match(re) || []).length;
+      if (!hits) continue;
+      const w = hits * 10 + (POINT_QUOTA[tag] ? 2 : 0);
+      if (w > bestW) { bestW = w; bestTag = tag; }
+    }
+    if (!bestTag) return;
+
+    // 背景交代句（政策依据、目的说明）不是「要做什么」
+    let w = bestW;
+    let isBg = false;
+    if (/^(根据|依据|按照|为了|为[\u4e00-\u9fa5]{1,3}|响应|结合|旨在|进一步|认真|切实|本次|经|现将)/.test(out)) {
+      w -= 4;
+      isBg = true;
+    }
+    if (/(详见附件|见附件|见附表)/.test(out) && out.length < 24) w -= 3;
+
+    const sig = out.slice(0, 10);
+    if (seenSig.has(sig)) return;
+    seenSig.add(sig);
+
+    cands.push({ idx, tag: bestTag, w, text: out, bg: isBg });
+  });
+
+  if (!cands.length) {
+    // 一条都没抽到，退化成「取最长的几句」
+    return sentences.slice(0, 3).map(tidyPoint);
+  }
+
+  const chosen = [];
+  const used = new Set();
+  const quota = { ...POINT_QUOTA };
+
+  // 第一轮：按配额保证每个维度都有覆盖
+  const ranked = [...cands].sort((a, b) => b.w - a.w || a.idx - b.idx);
+  for (const c of ranked) {
+    if (chosen.length >= max) break;
+    if (quota[c.tag] <= 0) continue;
+    if (chosen.some((x) => x.text === c.text)) continue;
+    quota[c.tag] -= 1;
+    chosen.push(c);
+    used.add(c.idx);
+  }
+
+  // 第二轮：配额有剩，就从正文里所有还没选中的句子补，不再只看命中维度的
+  if (chosen.length < max) {
+    sentences.forEach((raw, idx) => {
+      if (chosen.length >= max) return;
+      if (used.has(idx)) return;
+      const out = tidyPoint(raw);
+      if (!out) return;
+      if (isNoisePoint(out)) return;
+      const cn = (out.match(/[\u4e00-\u9fa5]/g) || []).length;
+      if (out.length < 14 || cn < 8) return;
+      const bg = /^(根据|依据|按照|为了|为[\u4e00-\u9fa5]{1,3}|响应|结合|旨在|进一步|认真|切实|本次|经|现将)/.test(out);
+      chosen.push({ idx, tag: '', w: 0, text: out, bg });
+      used.add(idx);
+    });
+  }
+
+  // 回到原文顺序，但背景句沉到最后
+  chosen.sort((a, b) => (a.bg === b.bg ? a.idx - b.idx : a.bg ? 1 : -1));
+  return chosen.map((c) => c.text);
+}
+
+/* ==================== 评分 ==================== */
+
+function pickScore(title, body, times) {
+  const t = String(title || '');
+  const b = String(body || '');
+  const today = new Date();
+  let score = 2;
+
+  // 有明确时间点且在未来 7 天内 → 最高优先级
+  const list = extractTimes(b);
+  for (const it of list) {
+    const d = latestDate(it.text, today);
+    if (!d) continue;
+    const gap = (d - today) / 86400000;
+    if (gap >= 0 && gap <= 7) { score = Math.max(score, 5); break; }
+    if (gap >= 0 && gap <= 21) score = Math.max(score, 4);
+  }
+
+  if (/截止|报名|申请|提交|报送|选课|退课|补选|缴费|注册|确认/.test(t + b)) score = Math.max(score, 3);
+  if (/竞赛|大赛|比赛|招聘|实习|推免|保研|交换|奖学金|助学金/.test(t)) score = Math.max(score, 4);
+  if (/安全|危化|消防|演练|停水|停电|预警|事故/.test(t + b)) score = Math.max(score, 4);
+  if (/讲座|沙龙|报告会|分享会/.test(t)) score = Math.min(score + 1, 4);
+
+  return Math.min(Math.max(score, 1), 5);
+}
+
+/* ==================== 摘要 ==================== */
+
+function pickSummary(title, body) {
+  const text = String(body || '').replace(/\s+/g, ' ').trim();
+  const first = splitSentences(text).find((s) => !/^(关于|根据|为了)/.test(s) && s.length >= 12);
+  if (first) return tidyPoint(first).slice(0, 120);
+  return text.slice(0, 100) || String(title || '');
+}
+
+/* ==================== 主入口 ==================== */
+
+/**
+ * 判断一条通知，保留则返回结构化结果，不保留返回 null
+ * @param {{title:string, url:string, content:string, published_at?:string}} notice
+ */
+function screenOne(notice) {
+  const title = String(notice.title || '').trim();
+  // 只压空格，保留换行——通知正文常是「字段：值」逐行结构，换行是切要点的重要依据
+  const body = String(notice.content || '').replace(/[^\S\n]+/g, ' ').trim();
+  if (!title && !body) return null;
+
+  // 忽略类：标题命中最严格，正文只对明确的宣传稿表达式生效
+  for (const re of SKIP_TITLE) {
+    if (re.test(title)) return null;
+  }
+  if (SKIP_BODY.some((re) => re.test(body.slice(0, 300)))) return null;
+
+  // 教职工事务
+  for (const re of STAFF_RULES) {
+    if (re.test(title) || re.test(body.slice(0, 30))) return null;
+  }
+  // 已过期
+  if (isExpired(body, new Date())) return null;
+
+  const category = pickCategory(title, body);
+  const eventTime = formatTimes(body);
+  const keyPoints = pickKeyPoints(body, 10);
+  const score = pickScore(title, body, eventTime);
+  const summary = pickSummary(title, body);
+
+  // 什么都不像学生要办的事，丢掉
+  if (!keyPoints.length && score <= 2) return null;
+
+  return {
+    title,
+    url: notice.url || '',
+    published_at: notice.published_at || '',
+    category,
+    score,
+    event_time: eventTime,
+    key_points: keyPoints,
+    summary,
+  };
+}
+
+
+window.SCREENER = {
+  CATEGORIES,
+  screenOne,
+  pickCategory,
+  extractTimes,
+  formatTimes,
+  pickKeyPoints,
+  pickScore,
+  isExpired,
+  latestDate,
+};
+</script>
+<script>
+const DATA = [{"title":"食品与生物工程学院创新创业学分已获分值公示","url":"https://spxy.zjgsu.edu.cn/?news/7136.html","published_at":"2026-11-10","category":"选课学籍","score":3,"event_time":"公示 2025年11月10日 — 2025年11月16日","key_points":["学院根据学生提供的申报材料，对学生的创新创业学分申报材料进行审核，现将审核结果在学院网站公示一周","公示期自2025年11月10日至11月16日，公示期间，学生如对公示的创新创业学分数据有疑议","请向食品学院教务办公室（食品楼245室）反映，联系人：裘老师，联系电话28008910。","根据《浙江工商大学关于印发本科生创新创业学分管理办法的通知》（浙商大教[2024]73号)文件精神"],"summary":"附件一、食品学院2023级创新学分申请公示","site":"通知公告","found_at":"2026-11-10T10:55:59.065Z","content":"根据《浙江工商大学关于印发本科生创新创业学分管理办法的通知》（浙商大教[2024]73号)文件精神，学院根据学生提供的申报材料，对学生的创新创业学分申报材料进行审核，现将审核结果在学院网站公示一周，公示期自2025年11月10日至11月16日，公示期间，学生如对公示的创新创业学分数据有疑议，请向食品学院教务办公室（食品楼245室）反映，联系人：裘老师，联系电话28008910。\n附件一、食品学院2023级创新学分申请公示"},{"title":"关于食品质量与安全专业“协同育人”实务导师进班级活动的通知","url":"https://spxy.zjgsu.edu.cn/?news/7134.html","published_at":"2026-11-09","category":"讲座报告","score":5,"event_time":"11月11日（周三）上午8:05","key_points":["食品质量与安全专业于第九周举办一场实务导师进班级活动，具体安排如下：","讲座题目：特殊医学用途配方食品合法解读","实务导师：裘耀东","杭州纽曲星生物科技有限公司/董事长","时间：11月11日（周三）上午8:05","为了响应学校开展“协同育人”实务导师进班级的活动，推进我院实践教学改革，提高人才培养质量"],"summary":"为了响应学校开展“协同育人”实务导师进班级的活动，推进我院实践教学改革，提高人才培养质量，食品质量与安全专业于第九周举办一场实务导师进班级活动，具体安排如下： 讲座题目：特殊医学用途配方食品合法解读 ","site":"通知公告","found_at":"2026-11-10T10:55:59.065Z","content":"为了响应学校开展“协同育人”实务导师进班级的活动，推进我院实践教学改革，提高人才培养质量，食品质量与安全专业于第九周举办一场实务导师进班级活动，具体安排如下：\n讲座题目：特殊医学用途配方食品合法解读\n实务导师：裘耀东\n杭州纽曲星生物科技有限公司/董事长\n时间：11月11日（周三）上午8:05\n地点：B331\n欢迎全院师生前往聆听！"},{"title":"关于2026-2027学年第一学期计算机类基础课程期中考试的通知","url":"https://jww.zjgsu.edu.cn/2026/1109/c1331a234407/page.htm","published_at":"2026-11-09","category":"教务考试","score":5,"event_time":"2026年11月14日（第9周周六）","key_points":["计算机科学与技术学院本学期开设计算机基础课程…","期中考试时间为2026年11月14日（第9周周六）。","学生必须凭有效证件(身份证、学生证、饭卡),按以上所排时间和机房准时参加上机考试…","学生按照行政班参加考试，如行政班没有则跟教学班参加考试，比如你是规划2402（行政班）学生","但是你和汉语2401（教学班）一起上课，请按照规划2402班级的考试时间参加考试。","特殊情况不能参加考试的同学，需要办理缓考手续！","将缓考情况说明（没有模板，由学生自行写好，要有联系电话…","联系电话28008312，具体缓考时间和地点会直接短信通知。","如有问题，可联系开课学院教秘老师（杨老师，联系电话：28008312）。","本次考场分为教工路校区和下沙校区，上机考试具体安排请查看附件。"],"summary":"各学院、学生： 计算机科学与技术学院本学期开设计算机基础课程：《Python语言1》《数据库应用》《AI智能办公》《大学计算机基础》《C语言》《办公软件高级应用》,期中考试时间…","site":"学校教务","found_at":"2026-11-10T11:51:59.878Z","content":"各学院、学生：\n计算机科学与技术学院本学期开设计算机基础课程：《Python语言1》《数据库应用》《AI智能办公》《大学计算机基础》《C语言》《办公软件高级应用》,期中考试时间为2026年11月14日（第9周周六）。\n注意事项：\n1、本次考场分为教工路校区和下沙校区，上机考试具体安排请查看附件。\n2、学生必须凭有效证件(身份证、学生证、饭卡),按以上所排时间和机房准时参加上机考试，不可随意更改场次和教室。\n3、学生按照行政班参加考试，如行政班没有则跟教学班参加考试，比如你是规划2402（行政班）学生，但是你和汉语2401（教学班）一起上课，请按照规划2402班级的考试时间参加考试。\n4、特殊情况不能参加考试的同学，需要办理缓考手续！将缓考情况说明（没有模板，由学生自行写好，要有联系电话，所在学院教务办或者学办盖章）交到信息楼329杨老师处，联系电话28008312，具体缓考时间和地点会直接短信通知。\n5、如有问题，可联系开课学院教秘老师（杨老师，联系电话：28008312）。\n教务处计算机科学与技术学院实验室与资产管理\n2026年-秋-教工路-期中上机考试安排表.xls\n2026年-秋-下沙-期中上机考试安排表.xlsx"},{"title":"关于开展2026级本科新生始业教育正式考试的通知","url":"https://xsc.zjgsu.edu.cn/2026/1106/c1826a233642/page.htm","published_at":"2026-11-06","category":"教务考试","score":4,"event_time":"11月11日 — 11月25日；培训 11月26日","key_points":["考试时间：11月11日—11月25日，各学院新生的具体考试时间见附件1。","考试地点：由各学院自行安排。","考试类型：开卷考试，学生从手机/电脑端进入课群开始考试，可携带《2026学生手册》。","题库中随机抽取100题，题型包括单选题、多选题、判断题、不定项选择题，每题1分。","正式考试，每位学生在规定的考试时长内可多次提交，以最后一次提交的结果为准。","总评成绩达80分及以上者通过，未通过者学校将另行安排补考时间。","推送链接地址：https://mp.weixin.qq.com/s/2MPq1VTldVIMBk…","请辅导员于11月26日前将汇总后的请假学生名单盖章后送至学活306谢老师处备案…","联系人：谢老师，电话：28877263。","根据《关于开展2026级本科新生始业教育优课的通知》，2026级本科新生始业教育正式考试安排如下："],"summary":"各学院： 根据《关于开展2026级本科新生始业教育优课的通知》，2026级本科新生始业教育正式考试安排如下： 一、考试相关安排 1.考试时间：11月11日—11月25日，各学院…","site":"学校学工","found_at":"2026-11-10T11:52:00.571Z","content":"各学院：\n根据《关于开展2026级本科新生始业教育优课的通知》，2026级本科新生始业教育正式考试安排如下：\n一、考试相关安排\n1.考试时间：11月11日—11月25日，各学院新生的具体考试时间见附件1。\n2.考试地点：由各学院自行安排。\n二、考试相关说明\n1.考试时长：50分钟。\n2.考试类型：开卷考试，学生从手机/电脑端进入课群开始考试，可携带《2026学生手册》。题库中随机抽取100题，题型包括单选题、多选题、判断题、不定项选择题，每题1分。正式考试，每位学生在规定的考试时长内可多次提交，以最后一次提交的结果为准。总评成绩达80分及以上者通过，未通过者学校将另行安排补考时间。根据始业教育各板块分数占比计算，在其他几项均为满分情况下，在线考试成绩需达到74分及以上方可满足总评成绩要求。\n3.考试方式：通过易班APP始业教育课群或易班优课电脑端两种方式中的任一方式进入。具体详见学生处发布的2026级本科新生始业教育优课平台使用指南。推送链接地址：https://mp.weixin.qq.com/s/2MPq1VTldVIMBkYsbIXkBQ\n三、其他事项说明\n1.如有学生因特殊不可抗力原因需要请假，请辅导员于11月26日前将汇总后的请假学生名单盖章后送至学活306谢老师处备案，请假说明模板见附件2。\n2.考试有效成绩为学院所在考试时间段内的最新一次成绩，考试结束后请勿点击再次考试，否则考试成绩作废，后果需自行承担。\n3.系统使用及考试期间，如有因系统问题出现的考试异常，可首先尝试刷新重新进入或更换方式进入。若尝试无效，请将班级、姓名、出现问题及相关截图报告给学院辅导员，由学院汇总报送至邮箱zjgsuyiban@163.com，经后台核实后，学校将另行安排补考。联系人：谢老师，电话：28877263。\n学生工作部（学生处、人武部）\n学工部“易班·鸿云”思政教育创新发展\n附件1：2026级本科新生始业教育正式考试学院时间安排.xlsx\n附件2：本科新生始业教育考试请假说明模板.docx"},{"title":"关于食品质量与安全专业“协同育人”实务精英进课堂活动的通知1","url":"https://spxy.zjgsu.edu.cn/?news/7124.html","published_at":"2026-11-05","category":"讲座报告","score":4,"event_time":"11月6日（周五）上午9：50","key_points":["食品质量与安全专业结合《食品毒理学》课程要求于第八周举办“实务精英进课堂”活动，具体如下：","讲座题目：电解水技术在农产品趁鲜加工产业链的应用前景","实务精英：周康","水熊水科技(杭州)有限公司/总经理","时间：11月6日（周五）上午9：50","地点：食品楼303","为了响应学校开展“协同育人”的活动，推进我院实践教学改革，提高人才培养质量"],"summary":"为了响应学校开展“协同育人”的活动，推进我院实践教学改革，提高人才培养质量，食品质量与安全专业结合《食品毒理学》课程要求于第八周举办“实务精英进课堂”活动，具体如下： 讲座题目：电解水技术在农产品趁鲜","site":"通知公告","found_at":"2026-11-10T10:55:59.065Z","content":"为了响应学校开展“协同育人”的活动，推进我院实践教学改革，提高人才培养质量，食品质量与安全专业结合《食品毒理学》课程要求于第八周举办“实务精英进课堂”活动，具体如下：\n讲座题目：电解水技术在农产品趁鲜加工产业链的应用前景\n实务精英：周康\n水熊水科技(杭州)有限公司/总经理\n时间：11月6日（周五）上午9：50\n地点：食品楼303\n欢迎全院师生前往聆听！"},{"title":"关于做好2026—2027学年本科生实习实践工作的通知","url":"https://jww.zjgsu.edu.cn/2026/1103/c1331a233440/page.htm","published_at":"2026-11-03","category":"实习就业","score":4,"event_time":"截止 2027年9月30日","key_points":["加强2026—2027学年本科生实习实践工作的管理，现就有关事项通知如下。","系统设计进阶式实习实践体系，统筹安排实习实践的时间和流程，确保实习内容与专业人才培养…","分类明确实习目标、实习形式、组织方式、指导要求和考核标准，形成层次递进、衔接有序的实习实践教学体系。","有效设计实习教学体系设计，从低年级到高年级分阶段合理安排认识实习、专业实习、课程实践、毕业实习等形式","毕业实习指导教师由学院选派责任心强、业务熟悉、经验丰富的教师担任","认识实习、专业实习、课程实习等其他实习原则上由系主任、专业负责人…","各学院积极探索“远程在线任务+阶段性实地集中”“虚拟仿真入门+实体岗位深化”等灵活多样的实习模式。","全校毕业实习时间跨度自2026年11月起至2027年4月止。","由学院提交弹性实习组织方案，经教务处审核同意后即可实施，但需加强弹性实习学生的全过程指导与管理","及时解答或联系处理学生实习过程中遇到的问题，实习结束后在实习生的毕业实习手册上填写实习"],"summary":"各学院： 根据《教育部等六部门关于加强普通本科高校大学生实习工作的意见》（教高〔2026〕1号）《浙江工商大学本科生实习工作管理办法》（浙商大教〔2018〕416号）文件精神，…","site":"学校教务","found_at":"2026-11-10T11:51:59.878Z","content":"各学院：\n根据《教育部等六部门关于加强普通本科高校大学生实习工作的意见》（教高〔2026〕1号）《浙江工商大学本科生实习工作管理办法》（浙商大教〔2018〕416号）文件精神，切实提高学生实践创新能力，落实浙江省高校教育教学工作会议关于将认识实习、专业实习、毕业实习等各类实习统一纳入“浙江省本科高校大学生实习管理服务平台”管理的工作部署，加强2026—2027学年本科生实习实践工作的管理，现就有关事项通知如下。\n一、总体要求\n（一）实习范围。本学年实习实践涵盖认识实习、专业实习、毕业实习、课程实习等各类实习实践。各学院要结合学科专业特点和人才培养目标，打通高校小课堂和社会大课堂，贯通理论教学和实践教学，系统设计进阶式实习实践体系，统筹安排实习实践的时间和流程，确保实习内容与专业人才培养、产业发展需求有效衔接。\n（二）总体安排。各学院应按照认识实习、专业实习、课程实践、毕业实习、其他实习等类别，分类明确实习目标、实习形式、组织方式、指导要求和考核标准，形成层次递进、衔接有序的实习实践教学体系。各类实习均应落实过程指导和考核评价，构建学生实习实践闭环反馈机制。\n（三）统一平台管理原则。按照省教育厅“应接尽接”工作要求，本学年起将认识实习、专业实习、毕业实习、课程实践等各类实习实践统一纳入“校友邦大学生实习实践管理平台”（以下简称“校友邦平台”，http://www.xybsyw.com）进行信息化管理，实现全过程数据监测。\n二、组织管理与职责。\n（一）组织领导与职责。各学院应成立由分管教学院长任组长的实习工作领导小组，结合理论课程教学进度，充分考虑行业特点、学生学习情况，有效设计实习教学体系设计，从低年级到高年级分阶段合理安排认识实习、专业实习、课程实践、毕业实习等形式，统筹负责本学院各类实习实践教学的组织和实施。\n（二）指导教师要求。毕业实习指导教师由学院选派责任心强、业务熟悉、经验丰富的教师担任，鼓励与实习单位共同选派技术骨干或管理人员担任联合指导教师，全程参与学生指导；认识实习、专业实习、课程实习等其他实习原则上由系主任、专业负责人、课程负责人或任课教师等担任指导教师。\n（三）学生实习要求。严格遵守国家的政策法规及实习单位的安全、保密及劳动纪律等有关制度，按照《实习教学计划》和《实习教学大纲》的要求，认真做好实习准备工作并按时完成实习教学计划规定的实习项目。\n三、实习形式与分类要求\n（一）认识实习。各学院要结合专业认知教育需要，统筹安排认识实习，可依托校外实践基地，采取企业参观、行业调研、专家讲座等方式，帮助学生了解行业产业、岗位设置和职业要求，增强专业认知和职业认同。\n（二）专业实习和课程实习。各学院要结合专业教学进度，依托校外实践基地和校内实践平台，注重专业理论与实际应用相结合，强\n化学生专业实践能力培养。\n（三）毕业实习。\n1.实习形式。毕业实习可采用实践基地集中实习（以下简称“集中实习”）、学生自主联系实习（以下简称“分散实习”）两种方式，优先安排学生到已建立的校外实践基地实习。各学院积极探索“远程在线任务+阶段性实地集中”“虚拟仿真入门+实体岗位深化”等灵活多样的实习模式。毕业实习在严格管理的前提下，可允许学生自行选择单位、经学院批准后开展分散实习。\n2.时间安排。全校毕业实习时间跨度自2026年11月起至2027年4月止。各学院可结合人才培养需要及学生实际情况，合理调整毕业实习时间。允许实行弹性实习。由学院提交弹性实习组织方案，经教务处审核同意后即可实施，但需加强弹性实习学生的全过程指导与管理，实习质量和安全标准不得降低。\n3.过程指导与考核评价。实习指导教师需及时登录平台或关注校友邦教师端微信公众号，随时了解学生实习动态，批阅学生周（月）志，及时解答或联系处理学生实习过程中遇到的问题，实习结束后在实习生的毕业实习手册上填写实习"},{"title":"关于开展2026级本科新生始业教育优课的通知","url":"https://xsc.zjgsu.edu.cn/2026/1102/c1826a233399/page.htm","published_at":"2026-11-02","category":"教务考试","score":4,"event_time":"11月2日00:00；11月30日23:59","key_points":["学校依托易班“优课YOOC”平台开展2026级本科新生始业教育。","新生始业教育课程共分为四个模块，包括“看”——始业教育优课；“读”——学习资料库…","这些内容将为同学们适应大学生活提供全面导航！","2026级新生始业教育学习对象","在规定时间内完成“商大知多少”新生始业教育线上考试。","敲黑板：2026级新生始业教育总评成绩80分及以上者为通过，未通过者学校将另行安排补考时间。","考试类型：开卷考试，学生只可携带纸质学生手册及一个用于考试的电子设备（手机/电脑）。","正式考试，每位新生在规定的考试时长内可多次提交，以最后一次提交的分数为准。","联系人：谢老师，电话：28877263","为指导和帮助2026级浙小商更加深入全面地了解学校，尽快完成角色转换、夯实价值底色、明晰成长路径"],"summary":"为指导和帮助2026级浙小商更加深入全面地了解学校，尽快完成角色转换、夯实价值底色、明晰成长路径，学校依托易班“优课YOOC”平台开展2026级本科新生始业教育。","site":"学校学工","found_at":"2026-11-10T11:52:00.571Z","content":"为指导和帮助2026级浙小商更加深入全面地了解学校，尽快完成角色转换、夯实价值底色、明晰成长路径，学校依托易班“优课YOOC”平台开展2026级本科新生始业教育。新生始业教育课程共分为四个模块，包括“看”——始业教育优课；“读”——学习资料库；“谈”——我想对商大说；“测”——商大知多少。这些内容将为同学们适应大学生活提供全面导航！\n今天，就让易小商带你全面了解如何开启“浙江工商大学2026级本科新生始业教育”课程吧！\n一、2026级新生始业教育学习对象\n2026级本科新生（含专升本学生，第二学士除外）。\n二、2026级新生始业教育内容及成绩评定\n2026级新生始业教育内容及成绩评定由下面四个部分组成：\n1.“看”——始业教育优课（15%）\n【1】辅导员带浙小商学党史\n【2】浙小商校史校情教育\n【3】浙小商校训教育\n【4】浙小商校歌教育\n【5】校园认知\n【6】浙小商底线规则教育：校纪校规教育\n【7】浙小商生命安全教育\n【8】浙小商安全教育（一）：反诈安全教育\n【9】浙小商安全教育（二）：消防安全教育\n【10】浙小商安全教育（三）：交通安全教育\n【11】浙小商急救常识教育\n【12】浙小商创新创业教育\n【13】浙小商眼中的浙商大（一）——初见浙商大\n【14】浙小商眼中的浙商大（二）——解密浙商大\n根据视频课程的学习进度计算分值，获取分数。\n2.“读”——学习资料库（5%）\n在课群的学习资料库内下载2026版学生手册，自主阅读学习。课群学习资料区下载/预览大于或等于1次，成绩记为满分。否则按照比例获取分数。\n3.“谈”——我想对商大说（5%）\n积极参与“我想对商大说”话题讨论。在“我想对商大说”话题讨论区发帖/回帖大于或等于2条，成绩记为满分。否则按照比例获取分数。\n4.“测”——商大知多少（75%）\n在规定时间内完成“商大知多少”新生始业教育线上考试。新生始业教育考试内容涵盖与新生相关的学生管理制度、安全教育、身心健康、校情校史、思想引领、禁毒知识等内容，题库内共有464道题目。考试题目从题库中随机抽取。\n敲黑板：2026级新生始业教育总评成绩80分及以上者为通过，未通过者学校将另行安排补考时间。根据始业教育各板块分数占比，在其他几项均为满分情况下，在线考试成绩需达到74分及以上方可满足总评成绩要求。\n三、新生始业教育线上考试安排\n开放时间：11月2日00:00——11月30日23:59，具体考试时间由学工部统一组织安排，另行通知。\n考试地点：由各学院自行安排。\n考试总时长：50分钟，以点击“开始考试”开始计时。\n考试类型：开卷考试，学生只可携带纸质学生手册及一个用于考试的电子设备（手机/电脑）。题库中随机抽取100题，题型包括单选题、多选题、判断题、不定项选择题，每题各1分。\n正式考试，每位新生在规定的考试时长内可多次提交，以最后一次提交的分数为准。\n四、新生始业教育课群学习支持\n系统使用期间，如有针对试题理解的歧义等问题，请及时反馈。\n联系人：谢老师，电话：28877263\n浙江工商大学学生工作部（学生处、人武部）\n学工部“易班·鸿云”思政教育创新发展\n请2026级浙小商们认真学习，\n内化于心、外化于行，\n度过一个顺利有收获的大学之旅！\n（后附易班认证及始业教育课程进入方式）\n敲黑板啦|浙小商易班注册及始业教育课程学习指南\n2026级浙小商们，欢迎加入浙江工商大学的大家庭！请小萌新们先下载【易班APP】，以便完成后期的新生始业教育课程哦！\n请注意，易班平台一定要通过校方实名认证才可以正常使用各项功能。下面为大家带来最详细的易班注册认证攻略，助你顺利开启易班大门！\n一、什么是易班？\n易班网是为学生提供“互联网+教育教学、生活服务和文化娱乐”等全方位校园服务，主动承担国家意识形态战略、服务学生成长成才的学生网络思政工作示范平台。截至2025年3月"},{"title":"专业选修课补选通知（2026-2027学年第二学期）","url":"https://jww.zjgsu.edu.cn/2026/1030/c1331a233341/page.htm","published_at":"2026-10-30","category":"选课学籍","score":3,"event_time":"","key_points":[],"summary":"专业选修课补选通知（2026-2027学年第二学期）","site":"学校教务","found_at":"2026-11-10T11:52:41.272Z","content":""},{"title":"关于2027届本科毕业生电子摄像安排的通知","url":"https://jww.zjgsu.edu.cn/2026/1026/c1331a233192/page.htm","published_at":"2026-10-26","category":"毕业离校","score":3,"event_time":"2026年10月31日 — 2026年11月1日；报名 2026年10月26日","key_points":["请各位学生务必按附件表中时间参与核验。","请于外网链接进入：https://jwxt.zjgsu.edu.cn/jwglxt","（注意：必须使用电脑缴费，不可使用手机等移动端，浏览器必须使用新版谷歌，火狐，safari）","图像采集收费标准为每人20元，报名缴费时间拟定于2026年10月26日——10月30日支付宝缴费。","报名缴费流程如下：","学生角色登陆教务管理系统——报名申请——考级项目报名——毕业电子摄像——选择“学生电子摄像”（打…","拍摄要求：学生刷采集码进行拍摄，请务必提前按流程（附件2）保存。","拍摄流程：现场按班级报到→按学号排队→以班为单位进入拍摄现场→在拍摄序号上签名→拍摄→离开拍摄现场。","经与新华社浙江省分社联系，定于2026年10月31-11月1日（下沙校区）","为保证学信网上传的成功率，请务必按照下面标准进行准备。"],"summary":"各学院、各班级学生： 经与新华社浙江省分社联系，定于2026年10月31-11月1日（下沙校区），对2027届本科毕业生（含2023级本科留学生、2025级专升本学生）集中进行…","site":"学校教务","found_at":"2026-11-10T11:51:59.878Z","content":"各学院、各班级学生：\n经与新华社浙江省分社联系，定于2026年10月31-11月1日（下沙校区），对2027届本科毕业生（含2023级本科留学生、2025级专升本学生）集中进行电子注册图像采集。请各位学生务必按附件表中时间参与核验。如确因故无法于本周末参与核验，可关注后续补拍通知。但需注意补拍席位有限，勿集中前往。现将有关事项通知如下：\n一、根据教育部规定，图像采集是毕业资格审查的重要环节，且毕业证书、学位证书的照片均需采用新华社统一采集的图像，网上电子注册也需采用采集的电子图像，故原则上不得请假，若有参加各类培训、考试等特殊情况，需事先向学院备案。\n二、报名缴费：\n请于外网链接进入：https://jwxt.zjgsu.edu.cn/jwglxt\n（注意：必须使用电脑缴费，不可使用手机等移动端，浏览器必须使用新版谷歌，火狐，safari）\n图像采集收费标准为每人20元，报名缴费时间拟定于2026年10月26日——10月30日支付宝缴费。报名缴费流程如下：\n学生角色登陆教务管理系统——报名申请——考级项目报名——毕业电子摄像——选择“学生电子摄像”（打钩）——点击右上角“缴费”，跳转到缴费界面——在缴费界面选择“学生电子摄像”（打钩）——点击“缴费”——通过支付宝缴费——支付宝缴费完成后，请等页面自动跳转到系统中的缴费界面，点击“已缴费栏”查看缴费情况（注意：支付宝缴费完成后，不要手动关闭缴费页面，务必要等页面自动跳转，否则无法更新缴费状态）。\n注意：参加校内集中拍摄人员通过支付宝缴费，请大家在规定时间内完成缴费，以免影响网上电子注册及毕业证书和学位证书制作。学校根据缴费数据制作现场拍摄名单，无法拍摄的同学请勿缴费。因故无法按时拍摄需补拍的学生关注补拍通知中的缴费时间，请勿在本次缴费。散拍的学生请在新华社浙江分社图像采集中心缴费，请勿在系统中缴费。\n三、拍摄安排：\n1．请毕业班学生按（附件1）时间提前10分钟到达指定地点，由班长组织班内学生，按学号顺序排队等候拍摄，不允许随意漏人。拍摄顺序严格以学号顺序为准，否则可能会导致图像与本人信息不匹配。\n2．拍摄要求：学生刷采集码进行拍摄，请务必提前按流程（附件2）保存。\n为保证学信网上传的成功率，请务必按照下面标准进行准备。\n①物姿态与表情：坐姿端正，表情自然，双眼自然睁开并平视，耳朵对称，左右肩膀平衡。\n②眼镜：常戴眼镜者应佩戴眼镜，但不得戴有色(含隐形、美瞳)眼镜，镜框不得遮挡眼晴，眼镜不能有反光。\n③佩饰及遮挡物：不得使用头部覆盖物(宗教、医疗和文化需要时，不得遮挡脸部或造成阴影)。不得佩戴耳环项链等饰品。\n④头发不要有碎发，不能遮挡眉毛、眼睛和耳朵。不宜化妆。脸部注意不要过油，不要高光高亮，嘴唇自然闭合。\n⑤衣着：穿衬衫（最好白色有领衬衫），如果没有，穿浅色有领衣服（颜色单一不要花哨），应与背景色区分明显。不要穿蓝色、紫色、黄色、绿色、粉色的衣服，避免复杂图案、条纹。可参考附件3。\n3．拍摄流程：现场按班级报到→按学号排队→以班为单位进入拍摄现场→在拍摄序号上签名→拍摄→离开拍摄现场。\n其他事宜可咨询学院教学秘书或教务处李老师，联系电话19357514074，0571-28008460。\n附件1：浙江工商大学2027届普通本科毕业生电子摄像时间安排表(3).xlsx\n附件2：采集码保存的流程.docx\n附件3：证件照拍摄要求.doc"},{"title":"关于推荐2025年度（2025—2026学年） 浙江省“康恩贝自强奖学金”的通知","url":"https://xsc.zjgsu.edu.cn/2026/1026/c1826a233194/page.htm","published_at":"2026-10-26","category":"评奖资助","score":4,"event_time":"2026年11月9日16:00","key_points":["现就做好2025 年度（2025—2026 学年）浙江省“康恩贝自强奖学金” 推荐申报有关事宜通…","我校全日制在校残疾本科生、硕士研究生、博士研究生（须持有有效残疾人证）…","申请人对照2026 年新修订《浙江省 “康恩贝自强奖学金” 评选管理办法》（附件 3）自主提交申请。","各学院严格对照评选管理办法，结合申请人实际情况开展初审…","学校完成审核、综合评定后，确定推荐名单与获奖等次，统一报送省“康恩贝自强奖学金” 评审办公室审定。","请各学院完成审核汇总后，于2026年11月9日16:00 前将纸质材料报送至学生活动中心311办公室","将全套电子版材料打包（命名格式：XX 学院 + 康恩贝自强奖学金）发送至邮箱…","申报材料按“一人一档” 整理，单个文件夹以 “XX 姓名” 命名，具体材料清单如下：","证书须按照申请表内奖项填报顺序依次排列；奖项已评审通过、证书暂未下发的，可由学院出具获奖证明替代。","根据浙江省残疾人福利基金会、浙江省学生资助管理中心《关于印发浙江省“康恩贝自强奖学金” 管理办法…"],"summary":"各学院、班级： 根据浙江省残疾人福利基金会、浙江省学生资助管理中心《关于印发浙江省“康恩贝自强奖学金” 管理办法的函》（浙残基函〔2026〕2 号），现就做好2025 年度（2…","site":"学校学工","found_at":"2026-11-10T11:52:00.571Z","content":"各学院、班级：\n根据浙江省残疾人福利基金会、浙江省学生资助管理中心《关于印发浙江省“康恩贝自强奖学金” 管理办法的函》（浙残基函〔2026〕2 号），现就做好2025 年度（2025—2026 学年）浙江省“康恩贝自强奖学金” 推荐申报有关事宜通知如下：\n一、申请对象\n我校全日制在校残疾本科生、硕士研究生、博士研究生（须持有有效残疾人证），2026 级新生不参与本次申报。\n二、申请程序\n（一）个人申请。申请人对照2026 年新修订《浙江省 “康恩贝自强奖学金” 评选管理办法》（附件 3）自主提交申请。\n（二）学院初审。各学院严格对照评选管理办法，结合申请人实际情况开展初审，初审通过后将符合条件学生的全套申报材料报送至学工部学生管理科。\n（三）学校报送。学校完成审核、综合评定后，确定推荐名单与获奖等次，统一报送省“康恩贝自强奖学金” 评审办公室审定。\n三、报送要求\n请各学院完成审核汇总后，于2026年11月9日16:00 前将纸质材料报送至学生活动中心311办公室；同时以学院为单位，将全套电子版材料打包（命名格式：XX 学院 + 康恩贝自强奖学金）发送至邮箱：zjgsuxsgl@163.com。\n申报材料按“一人一档” 整理，单个文件夹以 “XX 姓名” 命名，具体材料清单如下：\n1.浙江省“康恩贝自强奖学金”申报表（纸质版1份 + 电子版），文件命名：XX姓名+康恩贝自强奖学金申请表；\n2.浙江省“康恩贝自强奖学金”汇总表（纸质版1份 + 电子版），文件命名：XX学院+汇总表（每学院仅报送1 份）；\n3.佐证材料复印件：\n① 本人有效期内身份证正反面、残疾人证；\n② 银行卡正反面；\n③ 申报周期（2025—2026 学年）内获奖证书、成果证明等材料。证书须按照申请表内奖项填报顺序依次排列；奖项已评审通过、证书暂未下发的，可由学院出具获奖证明替代。\n学生工作部\n附件1：浙江省“康恩贝自强奖学金”申报表docx.docx\n附件2：浙江省康恩贝自强奖学金汇总表 .docx\n附件3：关于印发浙江省“康恩贝自强奖学金”管理办法的函.pdf"},{"title":"关于开展2026年“好班风好学风建设月”系列活动的通知","url":"https://xsc.zjgsu.edu.cn/2026/1026/c1826a233173/page.htm","published_at":"2026-10-26","category":"实习就业","score":5,"event_time":"11月17日","key_points":["实施新时代立德树人工程，培养德智体美劳全面发展的社会主义建设者和接班人，持续以学生成长为中心","推进我校班风学风建设，以学促思、以学促进、以学促研，营造积极的班级学习和成长氛围以及良好的育人环境","学校将开展2026年“好班风好学风建设月”系列活动，具体事项通知如下。","学风固本厚植成才沃土协同务实涵育时代新人","“好班风好学风建设月”系列活动","“竞”彩纷呈，招兵买马——学科竞赛组队双选与导师咨询会","各学院在校内指定区域依托本院优势竞赛项目分别进行集中展示，结合赛项特点设置项目招募与人才自荐双向通道","围绕赛制解读、跨学科组队策略、备赛经验分享等方式","面向对象：全体本科生","为全面贯彻落实习近平总书记关于教育的重要论述和全国教育大会部署要求，落实立德树人根本任务"],"summary":"各学院： 为全面贯彻落实习近平总书记关于教育的重要论述和全国教育大会部署要求，落实立德树人根本任务，实施新时代立德树人工程，培养德智体美劳全面发展的社会主义建设者和接班人，持续…","site":"学校学工","found_at":"2026-11-10T11:52:00.571Z","content":"各学院：\n为全面贯彻落实习近平总书记关于教育的重要论述和全国教育大会部署要求，落实立德树人根本任务，实施新时代立德树人工程，培养德智体美劳全面发展的社会主义建设者和接班人，持续以学生成长为中心，推进我校班风学风建设，以学促思、以学促进、以学促研，营造积极的班级学习和成长氛围以及良好的育人环境，学校将开展2026年“好班风好学风建设月”系列活动，具体事项通知如下。\n一、活动主题\n学风固本厚植成才沃土协同务实涵育时代新人\n二、活动时间\n2026年10月—12月\n三、“好班风好学风建设月”系列活动\n（一）“竞”彩纷呈，招兵买马——学科竞赛组队双选与导师咨询会\n各学院在校内指定区域依托本院优势竞赛项目分别进行集中展示，结合赛项特点设置项目招募与人才自荐双向通道，围绕赛制解读、跨学科组队策略、备赛经验分享等方式，邀请指导教师、往届国奖团队负责人及优秀参赛学长学姐参与面对面咨询与对接交流。\n面向对象：全体本科生\n（二）“鸿云成长，共话未来”——“鸿云”成长岛新生体验计划\n开放“鸿云”成长岛新生班级预约专属通道，由新生辅导员和宣讲员担任参观讲解员，鼓励小团队参观，每次参观人数不多于12人，人数多的班级需分为多个团队。通过具身沉浸式教学互动场景，指导和帮助2026级本科生更好地适应大学学习和生活，进一步明确大学学习目标、端正学习态度、提升自我发展内在驱动力，科学规划大学学习与生活。\n面向对象：2026级本科生\n（三）“笔耕寻法，学思并重”——第五届最美学习笔记评比大赛\n营造积极向上、和谐互助的课堂氛围，结合学科专业，引导学生认真学习、自主学习、有效学习，将基础有序的知识点与逻辑鲜明的思维导图相结合，将生动有趣的自制插图与高效实用的学习方法相融合，进一步提高学习效率，树立优秀学习榜样，培养良好学习习惯。\n承办学院：统计学院 东语学院\n（四）“规划四年，班风铸魂”——班风学风建设方案擂台赛\n以2026级本科生班级为主要参加对象，以班级今后四年班风学风建设规划为主题，旨在从新生入学起就营造团结文明、积极向上的班风和严谨刻苦、勤思善问的学风，带领班级同学进一步优化制定德智体美劳全面发展的成长规划。\n承办学院：法学院 公管学院\n面向对象：2026级本科生\n（五）“光影青春，科技向善”——班级学风AIGC创意微电影大赛\n引领大学生思考如何更好地成长成才，促使大学生主动融入班级，共同建设班级，营造良好学风，形成和谐文明的校园新风尚。鼓励学生积极运用人工智能（AIGC）工具进行创作，各班级可围绕班风学风建设中的真实故事，利用AI进行剧本构思、视觉生成、智能剪辑等，深度挖掘身边的“真善美”感人故事和榜样事迹，引导大学生思考科技向善的力量，以创新形式深化社会主义核心价值观教育，做到唱响主旋律、弘扬正能量，进一步提升班级凝聚力与学生的科技创新素养，以实际行动报效伟大祖国。\n承办学院：信电学院、人工智能学院 泰隆金融学院\n（六）“知纪明规，守纪笃行”——校纪校规教育宣讲\n各学院在学风建设月期间自主组织开展至少1场面向学院新生的校纪校规教育宣讲，聚焦学生日常行为规范与校纪校规底线，通过真实案例剖析、违纪学生现身说法、学工教师专题解读等形式，系统展示违规违纪行为的代价与后果，挖掘警示教育资源、明晰纪律红线标尺，营造广大青年学生知敬畏、存戒惧、守底线的良好校园氛围，鼓励成为明德守法、严于律己、知错能改、向阳而生的新时代青年。\n面向对象：全体本科生\n（七）“学长开讲，朋辈领航”——优秀学子学风宣讲活动\n学院层面成立“学风宣讲团”，进一步推动优良学风的传承与建设，充分发挥优秀学生的榜样示范作用。各学院需遴选6—8名政治坚定、学业优异、事迹突出的高年级本科生或研究生，组建本院学风宣讲队伍，面向2026级、2025级学生开展系列宣讲活动。宣讲内容应围绕学业规划、学习方法、科研入门、学科竞赛、成长"}];
+const CFG = {"title":"学院信息筛选助手","college":"浙江工商大学 食品与生物工程学院","sites":[{"name":"通知公告","url":"https://spxy.zjgsu.edu.cn/?tzgg.html","enabled":true},{"name":"学生工作","url":"https://spxy.zjgsu.edu.cn/?xgdt.html","enabled":true},{"name":"学生科技","url":"https://spxy.zjgsu.edu.cn/?xskj.html","enabled":true},{"name":"就业信息","url":"https://spxy.zjgsu.edu.cn/?jyxx.html","enabled":true},{"name":"研究生教学","url":"https://spxy.zjgsu.edu.cn/?yjsdt.html","enabled":true},{"name":"党群工作","url":"https://spxy.zjgsu.edu.cn/?dqdt.html","enabled":true},{"name":"实验管理","url":"https://spxy.zjgsu.edu.cn/?zxdt.html","enabled":false},{"name":"学校教务","url":"https://jww.zjgsu.edu.cn/1331/list.htm","enabled":true},{"name":"学校学工","url":"https://xsc.zjgsu.edu.cn/1826/list.htm","enabled":true}],"maxNew":6};
+const ALL = '全部';
+const KEY_DEL = 'nc_deleted';
+const KEY_DRAFT = 'nc_drafts';
+const KEY_PURGE = 'nc_purged';
+let cur = ALL;
+let QS = '';
+function hit(n){
+  if (!QS) return true;
+  const t = [n.title, n.summary, n.event_time, n.category, (n.key_points || []).join(' ')].join(' ').toLowerCase();
+  return t.indexOf(QS.toLowerCase()) >= 0;
+}
+
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function stars(n){ const v=Math.max(1,Math.min(5,Number(n)||1)); return '★'.repeat(v)+'☆'.repeat(5-v); }
+let MEM = {};
+let STORAGE_OK = true;
+try { localStorage.setItem('nc_probe','1'); localStorage.removeItem('nc_probe'); } catch(e){ STORAGE_OK = false; }
+
+function ld(k){
+  try {
+    const raw = localStorage.getItem(k);
+    return JSON.parse(raw || '[]');
+  } catch(e){
+    return MEM[k] || [];
+  }
+}
+function sv(k,v){
+  MEM[k] = v.slice();
+  try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){ STORAGE_OK = false; }
+}
+function keyOf(n){ return n.url || n.title; }
+// 卡片底部的抓取时间，形如「11-10 18:55 抓取」
+// 点卡片身子展开/收起；点里面的按钮、链接、正文快照都不动卡片
+function cardToggle(el, e){
+  if (e && e.target && e.target.closest && e.target.closest('.push,.del,.rest,.purge,.btn-link,.rawurl,a,details,summary')) return;
+  el.classList.toggle('open');
+}
+function fetchtxt(n){
+  const t = n.found_at || '';
+  if (!t) return n.published_at ? ('发布于 ' + n.published_at) : '';
+  const d = new Date(t);
+  if (isNaN(d.getTime())) return '';
+  const p = function(x){ return String(x).length < 2 ? '0' + x : String(x); };
+  return p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ' 抓取';
+}
+function tokenGet(){ try{ return localStorage.getItem('nc_gh_token')||''; }catch(e){ return MEM['nc_gh_token']||''; } }
+function tokenSet(v){ MEM['nc_gh_token']=v; try{ localStorage.setItem('nc_gh_token', v); }catch(e){} }
+
+function alive(){ const d=ld(KEY_DEL), p=ld(KEY_PURGE); return DATA.filter(function(n){ return d.indexOf(keyOf(n))<0 && p.indexOf(keyOf(n))<0; }); }
+function dead(){ const d=ld(KEY_DEL), p=ld(KEY_PURGE); return DATA.filter(function(n){ return d.indexOf(keyOf(n))>=0 && p.indexOf(keyOf(n))<0; }); }
+
+function card(n, action){
+  const short = function(p){ const t = String(p||''); return t.length > 50 ? (t.slice(0,48)+'…') : t; };
+  const prep = (n.key_points||[]).map(function(p){ return '<div class="prep">· '+esc(short(p))+'</div>'; }).join('')
+    || '<div class="prep muted">· 正文没抓到（内容可能在附件里），展开点原文看要求</div>';
+  const pts = (n.key_points||[]).map(function(p){ return '<li>'+esc(p)+'</li>'; }).join('')
+    || '<li class="muted">这条通知正文很短（内容可能在附件里），请点开原文查看具体要求</li>';
+  const btns = action==='del'
+    ? '<button class="push mini" data-u="'+esc(n.url||'')+'">推送</button><button class="del" data-k="'+esc(keyOf(n))+'">删除</button>'
+    : action==='rest'
+      ? '<button class="rest" data-k="'+esc(keyOf(n))+'">恢复</button><button class="purge" data-k="'+esc(keyOf(n))+'">彻底删除</button>'
+      : '';
+  return '<article class="card s'+(n.score||1)+'">'
+    + '<div class="tagrow"><span class="cat">['+esc(n.category)+']</span>'
+    + (n.tags||[]).map(function(t){ return '<span class="free">#'+esc(t)+'</span>'; }).join('')
+    + '<span class="score">'+stars(n.score)+'</span></div>'
+    + '<h2>'+esc(n.title)+'</h2>'
+    + (n.summary ? '<div class="presum">'+esc(n.summary)+'</div>' : '')
+    + (prep ? '<div class="prepts">'+prep+'</div>' : '')
+    + (n.content ? '<details class="full"><summary><span class="t-open">展开原文内容（'+n.content.length+' 字）▼</span><span class="t-close">收起原文内容 ▲</span></summary><p>'+esc(n.content)+'</p></details>'
+      : '<div class="nofull">这条没抓到正文（内容可能在附件里），请点开原文查看</div>')
+    + '<div class="meta2">来源：'+esc(n.site||'')+(n.published_at?' · 发布 '+esc(n.published_at):'')
+    + (n.event_time?' | 时间：<span class="time">'+esc(n.event_time)+'</span>':'')
+    + (n.engine==='ai'?' · <b class="eng">AI 提炼</b>':(n.engine==='rule'?' · 规则提炼':''))+'</div>'
+    + '<div class="foot"><span class="fetched">'+fetchtxt(n)+'</span>'
+    + '<div class="acts">' + btns
+    + (n.url ? '<a class="btn-link" href="'+esc(n.url)+'" rel="noopener" onclick="event.stopPropagation();location.href=this.href;return false;"">原文 →</a>' : '')
+    + '</div></div>'
+    + (n.url ? '<a class="rawurl" href="'+esc(n.url)+'" rel="noopener" onclick="event.stopPropagation();location.href=this.href;return false;"">'+esc(n.url)+'</a>' : '')
+    + '</article>';
+}
+
+function row(n, mode){
+  const btn = mode==='trash'
+    ? '<button class="rest" data-k="'+esc(keyOf(n))+'">恢复</button>'
+    : '<button class="del" data-k="'+esc(keyOf(n))+'">删除</button>';
+  return '<div class="row"><div class="rowmain">'
+    + '<div class="rowdate">'+esc(n.published_at||'')+'</div>'
+    + '<div class="rowtitle">'+esc(n.title)+'</div>'
+    + '<div class="rowmeta">'+esc(n.category||'')+' · '+esc(n.site||'')+' · '+stars(n.score)+'</div>'
+    + '</div>'+btn+'</div>';
+}
+
+function buildFilters(){
+  const cats = [ALL].concat(Array.from(new Set(alive().map(function(n){ return n.category; }).filter(Boolean))));
+  const box = document.getElementById('filters');
+  box.innerHTML = cats.map(function(c,i){ return '<div class="chip'+(i===0?' on':'')+'" data-cat="'+esc(c)+'">'+esc(c)+'</div>'; }).join('');
+  box.querySelectorAll('.chip').forEach(function(el){
+    el.onclick = function(){
+      cur = el.getAttribute('data-cat');
+      box.querySelectorAll('.chip').forEach(function(x){ x.classList.toggle('on', x===el); });
+      renderScreen();
+    };
+  });
+}
+
+function renderScreen(){
+  const list = alive().filter(function(n){ return (cur===ALL || n.category===cur) && hit(n); });
+  document.getElementById('list').innerHTML = list.length
+    ? list.map(function(n){ return card(n, 'del'); }).join('')
+    : '<div class="empty">这个分类下还没有记录</div>';
+}
+
+function renderContest(){
+  const list = alive().filter(function(n){ return (n.category==='竞赛' || n.category==='科研创新') && hit(n); });
+  document.getElementById('contestList').innerHTML = list.length
+    ? list.map(function(n){ return card(n,'del'); }).join('')
+    : '<div class="empty">还没有竞赛类通知<br><span style="font-size:12.5px">学院官网最近没有新的竞赛通知被保留</span></div>';
+}
+
+function renderExam(){
+  const list = alive().filter(function(n){ return (n.category==='教务考试' || n.category==='证件考试') && hit(n); });
+  document.getElementById('examList').innerHTML = list.length
+    ? list.map(function(n){ return card(n,'del'); }).join('')
+    : '<div class="empty">还没有考试类通知</div>';
+}
+
+function renderLecture(){
+  const list = alive().filter(function(n){ return n.category==='讲座报告' && hit(n); });
+  document.getElementById('lectureList').innerHTML = list.length
+    ? list.map(function(n){ return card(n,'del'); }).join('')
+    : '<div class="empty">还没有讲座类通知<br><span style="font-size:12.5px">学院官网最近没有新的讲座报告被保留</span></div>';
+}
+
+function renderImportant(){
+  const list = alive().filter(function(n){ return n.category==='评奖资助' && hit(n); });
+  document.getElementById('importantList').innerHTML = list.length
+    ? list.map(function(n){ return card(n,'del'); }).join('')
+    : '<div class="empty">还没有重要类通知<br><span style="font-size:12.5px">奖学金、评优、困难认定、勤工助学这类会归到这里</span></div>';
+}
+
+function exportBackup(){
+  const data = {
+    site: CFG.title || '学院信息筛选助手',
+    exported_at: new Date().toISOString(),
+    total: alive().length,
+    notices: alive(),
+    trash: (typeof dead === 'function' ? dead() : [])
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '留档备份_' + new Date().toISOString().slice(0, 10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1500);
+  toast('已导出 ' + data.total + ' 条');
+}
+
+function renderArchive(){
+  const list = alive().filter(hit);
+  const bar = document.getElementById('arcbar');
+  if (bar){
+    const imp = list.filter(function(n){ return n.category==='评奖资助'; }).length;
+    const man = list.filter(function(n){ return n.engine==='extract' || n.site==='手动提取' || n.manual; }).length;
+    const old = list.length ? (list[list.length-1].published_at || '') : '';
+    bar.innerHTML = '共 <b>'+list.length+'</b> 条 · 重要 <b>'+imp+'</b> · 手动提取 <b>'+man+'</b>'
+      + (old ? ' · 最早 <b>'+esc(old)+'</b>' : '');
+  }
+  document.getElementById('archiveList').innerHTML = list.length
+    ? list.map(function(n){ return card(n,'del'); }).join('')
+    : '<div class="empty">留档库是空的</div>';
+}
+
+function renderTrash(){
+  const list = dead();
+  document.getElementById('trashList').innerHTML = list.length
+    ? list.map(function(n){ return card(n,'rest'); }).join('')
+    : '<div class="empty">回收站是空的</div>';
+}
+
+function renderDrafts(){
+  const list = ld(KEY_DRAFT);
+  document.getElementById('draftList').innerHTML = list.length
+    ? list.map(function(u,i){
+        return '<div class="row"><div class="rowmain"><div class="rowtitle" style="font-size:13px;font-weight:400;word-break:break-all">'+esc(u)+'</div></div>'
+          + '<button class="del" data-i="'+i+'">删除</button></div>';
+      }).join('')
+    : '<div class="empty" style="padding:30px 20px">还没有待处理链接</div>';
+  document.getElementById('draftList').querySelectorAll('.del').forEach(function(b){
+    b.onclick = function(){ const i=Number(b.getAttribute('data-i')); const l=ld(KEY_DRAFT); l.splice(i,1); sv(KEY_DRAFT,l); renderDrafts(); };
+  });
+}
+
+function renderSites(){
+  const list = CFG.sites || [];
+  const rows = list.map(function(s){
+    return '<tr><td>'+esc(s.name)+'</td><td style="word-break:break-all;color:#6b7280">'+esc(s.url)+'</td><td>'+(s.enabled===false?'已停用':'监控中')+'</td></tr>';
+  }).join('');
+  document.getElementById('siteTable').innerHTML = '<tr><th>栏目</th><th>地址</th><th>状态</th></tr>'+rows;
+  const on = list.filter(function(s){ return s.enabled!==false; }).length;
+  document.getElementById('bSites').textContent = on;
+  document.getElementById('bSites2').textContent = on;
+}
+
+function counts(){
+  document.getElementById('bScreen').textContent = alive().length;
+  document.getElementById('bContest').textContent = alive().filter(function(n){ return n.category==='竞赛' || n.category==='科研创新'; }).length;
+  document.getElementById('bExam').textContent = alive().filter(function(n){ return n.category==='教务考试' || n.category==='证件考试'; }).length;
+  document.getElementById('bLecture').textContent = alive().filter(function(n){ return n.category==='讲座报告'; }).length;
+  document.getElementById('bImportant').textContent = alive().filter(function(n){ return n.category==='评奖资助'; }).length;
+  document.getElementById('bArchive').textContent = alive().length;
+  document.getElementById('bTrash').textContent = dead().length;
+  document.getElementById('bDraft').textContent = ld(KEY_DRAFT).length;
+}
+
+// 事件委托：容器只绑一次，之后无论怎么重渲染，按钮都还有效
+function onRows(containerId, handle){
+  const box = document.getElementById(containerId);
+  if (!box) return;
+  box.addEventListener('click', function(e){
+    const btn = e.target.closest('.del,.rest,.push,.purge');
+    if (btn && box.contains(btn)){ handle(btn); return; }
+    // 正文快照（原生 details）自己负责展开，不折叠整卡
+    if (e.target.closest('details.full')) return;
+    // 原文链接：正常跳转，不折叠
+    if (e.target.closest('.btn-link') || e.target.closest('.rawurl')) return;
+    // 正文快照按钮：只切自己，不折叠整卡
+    const snapBtn = e.target.closest('.foldbtn');
+    if (snapBtn){
+      const sid = snapBtn.getAttribute('data-snap');
+      const sbox = document.getElementById(sid);
+      if (sbox){
+        const opened = sbox.classList.toggle('on');
+        snapBtn.textContent = opened ? '收起原文内容 ▲' : '展开原文内容 ▼';
+      }
+      return;
+    }
+    // 其余点到卡片任何位置 → 展开 / 收起
+    const card = e.target.closest('.card');
+    if (card && box.contains(card)) card.classList.toggle('open');
+  });
+}
+
+function setDeleted(key, del){
+  const d = ld(KEY_DEL);
+  if (del){
+    if (d.indexOf(key) < 0) d.push(key);
+  } else {
+    const i = d.indexOf(key);
+    if (i >= 0) d.splice(i, 1);
+  }
+  sv(KEY_DEL, d);
+  renderArchive(); renderScreen(); renderContest(); renderExam(); renderLecture(); renderImportant(); renderTrash(); counts();
+}
+
+function unb64(b){
+  const bin = atob(String(b).replace(/\n/g,''));
+  const bytes = new Uint8Array(bin.length);
+  for (let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+function b64(str){
+  const bytes = new TextEncoder().encode(str);
+  let s = '';
+  for (let i=0;i<bytes.length;i++) s += String.fromCharCode(bytes[i]);
+  return btoa(s);
+}
+
+// 彻底删除：同时从仓库的 data/notices.json 里删掉，抓取时不会再回来
+async function purgeOne(key){
+  const token = tokenGet();
+  const repo = ghRepo();
+  if (!token || !repo || !repo.repo){
+    const p = ld(KEY_PURGE);
+    if (p.indexOf(key) < 0) p.push(key);
+    sv(KEY_PURGE, p);
+    renderArchive(); renderScreen(); renderContest(); renderExam(); renderLecture(); renderImportant(); renderTrash(); counts();
+    toast('已在本机彻底删除（未连仓库：换设备还会看到）', 'err');
+    return;
+  }
+
+  toast('正在从仓库数据里删除…');
+  try {
+    const api = 'https://api.github.com/repos/' + repo.owner + '/' + repo.repo + '/contents/data/notices.json';
+    const head = { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json' };
+    const g = await fetch(api + '?ref=main', { headers: head });
+    if (!g.ok) throw new Error('读不到 data/notices.json（HTTP ' + g.status + '）');
+    const j = await g.json();
+    const arr = JSON.parse(unb64(j.content));
+    const keep = arr.filter(function(n){ return (n.url || n.title) !== key; });
+    if (keep.length === arr.length) throw new Error('仓库里找不到这条记录');
+
+    const put = await fetch(api, {
+      method: 'PUT',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, head),
+      body: JSON.stringify({
+        message: '彻底删除 1 条留档',
+        content: b64(JSON.stringify(keep, null, 2)),
+        sha: j.sha,
+        branch: 'main'
+      })
+    });
+    if (!put.ok) throw new Error('写入失败（HTTP ' + put.status + '）');
+
+    const p = ld(KEY_PURGE);
+    if (p.indexOf(key) < 0) p.push(key);
+    sv(KEY_PURGE, p);
+    renderArchive(); renderScreen(); renderContest(); renderExam(); renderLecture(); renderImportant(); renderTrash(); counts();
+    toast('已彻底删除，仓库数据里也删掉了', 'ok');
+  } catch (e) {
+    toast('彻底删除失败：' + e.message, 'err');
+  }
+}
+
+function bindRows(){
+  onRows('list', function(btn){
+    if (btn.classList.contains('push')){ handlePush(btn); return; }
+    const k = btn.getAttribute('data-k');
+    if (!k) return;
+    setDeleted(k, true);
+    toast('已移入回收站');
+  });
+  onRows('archiveList', function(btn){
+    if (btn.classList.contains('push')){ handlePush(btn); return; }
+    const k = btn.getAttribute('data-k');
+    if (!k) return;
+    setDeleted(k, true);
+    toast('已移入回收站');
+  });
+  [ 'contestList', 'examList', 'lectureList', 'importantList' ].forEach(function(id){
+    onRows(id, function(btn){
+      if (btn.classList.contains('push')){ handlePush(btn); return; }
+      const k = btn.getAttribute('data-k');
+      if (!k) return;
+      setDeleted(k, true);
+      toast('已移入回收站');
+    });
+  });
+  onRows('trashList', function(btn){
+    const k = btn.getAttribute('data-k');
+    if (!k) return;
+    if (btn.classList.contains('purge')){
+      if (!confirm('彻底删除后不能再恢复，确定删掉这一条？')) return;
+      purgeOne(k);
+      return;
+    }
+    setDeleted(k, false);
+    toast('已恢复到留档库');
+  });
+}
+
+function ghRepo(){
+  const h = location.hostname;
+  if (!/^w+.github.io$/.test(h)) return null;
+  const seg = location.pathname.split('/').filter(Boolean);
+  return { owner: h.replace(/.github.io$/,''), repo: seg[0] || '' };
+}
+
+function setStatus(msg, color){
+  const el = document.getElementById('pushStatus');
+  el.textContent = msg;
+  el.style.color = color || '#9ca3af';
+}
+
+let toastTimer = null;
+function toast(msg, kind){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast on' + (kind ? ' ' + kind : '');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ el.className = 'toast'; }, 4200);
+}
+
+// 通用：触发某个 workflow。返回 Promise<boolean>
+function runWorkflow(file, inputs, onOk, onFail){
+  const token = tokenGet();
+  if (!token){ toast('推送凭证已移除，这条发不出去', 'err'); if(onFail) onFail('no-token'); return Promise.resolve(false); }
+  const repo = ghRepo();
+  if (!repo || !repo.repo){ toast('这个页面不是从 GitHub Pages 打开的，按钮用不了', 'err'); if(onFail) onFail('no-repo'); return Promise.resolve(false); }
+
+  return fetch('https://api.github.com/repos/' + repo.owner + '/' + repo.repo + '/actions/workflows/' + file + '/dispatches', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + token,
+      'Accept': 'application/vnd.github+json',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ ref: 'main', inputs: inputs })
+  }).then(function(res){
+    if (res.status === 204){ if(onOk) onOk(); return true; }
+    if (res.status === 401 || res.status === 403) toast('Token 不对或权限不够（要勾 Actions: Read and write）', 'err');
+    else if (res.status === 404) toast('找不到 workflow ' + file + '，检查是否已上传到 .github/workflows', 'err');
+    else toast('触发失败（HTTP ' + res.status + '）', 'err');
+    if(onFail) onFail('http-' + res.status);
+    return false;
+  }).catch(function(){
+    toast('网络请求失败，浏览器可能拦截了跨域请求', 'err');
+    if(onFail) onFail('network');
+    return false;
+  });
+}
+
+// 推送：触发 push.yml
+function pushClip(s, n){
+  s = String(s || '').trim();
+  return s.length > n ? (s.slice(0, n) + '…') : s;
+}
+
+function pushViaMail(n){
+  const to = String(ld('nc_pushmail') || '').trim();
+  const subject = '【' + (n.category || '通知') + '】' + pushClip(n.title, 50);
+  const head = [];
+  if (n.summary) head.push(pushClip(n.summary, 110));
+  if (n.event_time) head.push('时间：' + pushClip(n.event_time, 100));
+  const pts = (n.key_points || []).slice(0, 4).map(function(p){ return '· ' + pushClip(p, 90); });
+  const tail = n.url ? ['原文：' + n.url] : [];
+  let body = '';
+  for (let i = 0; i < 6; i++){
+    body = head.concat(pts, tail).join('\n');
+    if (encodeURIComponent(body).length <= 1500) break;
+    if (pts.length > 1) pts.pop(); else break;
+  }
+  window.location.href = 'mailto:' + encodeURIComponent(to)
+    + '?subject=' + encodeURIComponent(subject)
+    + '&body=' + encodeURIComponent(body);
+  toast('已打开邮件，按发送即可');
+}
+
+function handlePush(btn){
+  const u = btn.getAttribute('data-u') || '';
+  if (!u) return;
+  const el = document.getElementById('pushMail');
+  if (el && el.value.trim()) sv('nc_pushmail', el.value.trim());
+  const n = DATA.filter(function(x){ return x.url === u; })[0]
+    || { url: u, title: '通知', category: '', score: 0 };
+  pushViaMail(n);
+}
+
+function triggerPush(inputs, okMsg){
+  toast('正在通知 GitHub 发信…');
+  runWorkflow('push.yml', inputs, function(){ toast(okMsg, 'ok'); });
+}
+
+
+
+// ---------- 手动输入内容并提炼（用页面里同一套 screener 引擎） ----------
+let lastPick = null;
+
+document.getElementById('manRun').onclick = function(){
+  const t = document.getElementById('manTitle').value.trim();
+  const b = document.getElementById('manBody').value.trim();
+  const box = document.getElementById('manResult');
+  if (!t && !b){
+    toast('先贴标题或正文', 'err');
+    return;
+  }
+  let title = t;
+  if (!title){
+    const lines = b.split('\n').map(function(x){ return x.trim(); }).filter(function(x){ return x.length > 4; });
+    title = (lines[0] || '').slice(0, 80);
+  }
+  const today = (function(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); })();
+
+  let r = null;
+  try {
+    r = window.SCREENER.screenOne({ title: title, url: '', content: b, published_at: today });
+  } catch(e){
+    box.innerHTML = '<div class="box"><h3>提炼出错</h3><p>' + esc(e.message) + '</p></div>';
+    return;
+  }
+
+  if (!r){
+    lastPick = null;
+    document.getElementById('manCopy').style.display = 'none';
+    box.innerHTML = '<div class="box"><h3>判定：这条不用管</h3>'
+      + '<p>按现在的口径，这条属于社团招新、日常活动宣传、节日问候、纯喜报、活动总结、报道稿或已过期通知一类的，不保留。</p>'
+      + '<div class="hint">想强制保留的话，把标题里的关键信息写清楚些（比如带上「报名」「考试」「截止」「竞赛」这类词），再提炼一次。</div></div>';
+    return;
+  }
+
+  const item = Object.assign({}, r, { title: title, site: '手动输入', published_at: today });
+  lastPick = item;
+  box.innerHTML = card(item);
+  document.getElementById('manCopy').style.display = 'inline-block';
+  toast('提炼完成：' + item.category + ' · ' + stars(item.score), 'ok');
+};
+
+document.getElementById('manCopy').onclick = function(){
+  if (!lastPick) return;
+  const n = lastPick;
+  const text = [n.title, '', '分类：' + (n.category||''), '星级：' + stars(n.score), (n.event_time ? '时间：' + n.event_time : '')]
+    .concat((n.key_points||[]).map(function(p){ return '· ' + p; }))
+    .join('\n');
+  if (navigator.clipboard) navigator.clipboard.writeText(text).then(function(){ toast('已复制提炼结果', 'ok'); });
+  else toast('这个浏览器不支持复制，手动选中吧', 'err');
+};
+
+// ---------- 常用网址：直接写回仓库里的 config.json ----------
+async function addSite(name, url){
+  const token = tokenGet();
+  const repo = ghRepo();
+  const st = document.getElementById('siteStatus');
+
+  const setMsg = function(msg, color){ st.textContent = msg; st.style.color = color || '#9ca3af'; };
+
+  if (!token){ setMsg('先在「推送与设置」填 GitHub Token，才能把网址写进仓库', '#dc2626'); return; }
+  if (!repo || !repo.repo){ setMsg('这个页面不是从 GitHub Pages 打开的，加不了', '#dc2626'); return; }
+  if (!name || !url){ setMsg('栏目名和网址都要填', '#dc2626'); return; }
+  if (!/^https?:\/\//i.test(url)){ setMsg('网址要 http:// 或 https:// 开头', '#dc2626'); return; }
+  if ((CFG.sites || []).some(function(x){ return x.url === url; })){ setMsg('这个网址已经在清单里了', '#dc2626'); return; }
+
+  setMsg('正在写入仓库 config.json…', '#6b7280');
+  try {
+    const api = 'https://api.github.com/repos/' + repo.owner + '/' + repo.repo + '/contents/config.json';
+    const head = { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json' };
+    const g = await fetch(api + '?ref=main', { headers: head });
+    if (!g.ok) throw new Error('读不到 config.json（HTTP ' + g.status + '）');
+    const j = await g.json();
+    const cfg = JSON.parse(unb64(j.content));
+    cfg.sites = cfg.sites || [];
+    cfg.sites.push({ name: name, url: url, enabled: true });
+
+    const put = await fetch(api, {
+      method: 'PUT',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, head),
+      body: JSON.stringify({
+        message: '加入常用网址：' + name,
+        content: b64(JSON.stringify(cfg, null, 2)),
+        sha: j.sha,
+        branch: 'main'
+      })
+    });
+    if (!put.ok) throw new Error('写入失败（HTTP ' + put.status + '）');
+
+    CFG.sites.push({ name: name, url: url, enabled: true });
+    renderSites();
+    document.getElementById('siteName').value = '';
+    document.getElementById('siteUrl').value = '';
+    setMsg('已加入：' + name + '（下一轮抓取开始生效）', '#047857');
+    toast('已加入常用网址：' + name, 'ok');
+  } catch(e){
+    setMsg('加入失败：' + e.message, '#dc2626');
+  }
+}
+
+document.getElementById('siteAdd').onclick = function(){
+  addSite(document.getElementById('siteName').value.trim(), document.getElementById('siteUrl').value.trim());
+};
+
+// ---------- 识别网址：触发 extract.yml，然后等 docs/extract.json 更新 ----------
+function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+
+async function waitExtract(sinceISO){
+  for (let i = 0; i < 24; i++){
+    await sleep(5000);
+    try {
+      const res = await fetch('./extract.json?_=' + Date.now());
+      if (!res.ok) continue;
+      const j = await res.json();
+      if (j.at && j.at >= sinceISO) return j;
+    } catch(e){}
+  }
+  return null;
+}
+
+document.getElementById('urlRun').onclick = function(){
+  const url = document.getElementById('urlInput').value.trim();
+  const st = document.getElementById('urlStatus');
+  const box = document.getElementById('urlResult');
+  const setMsg = function(msg, color){ st.textContent = msg; st.style.color = color || '#9ca3af'; };
+
+  if (!url || !/^https?:\/\//i.test(url)){ setMsg('先贴一个 http:// 或 https:// 开头的链接', '#dc2626'); return; }
+  if (!ghRepo() || !ghRepo().repo){ setMsg('这个页面不是从 GitHub Pages 打开的，识别功能用不了', '#dc2626'); return; }
+  if (!tokenGet()){ setMsg('先在「推送与设置」填 GitHub Token', '#dc2626'); return; }
+
+  const since = new Date().toISOString();
+  box.innerHTML = '';
+  setMsg('已提交，GitHub 正在抓取…大约等 1 分钟', '#6b7280');
+
+  runWorkflow('extract.yml', { url: url }, async function(){
+    const j = await waitExtract(since);
+    if (!j){ setMsg('等了 2 分钟还没结果，去仓库 Actions 页面看看「识别网址」任务有没有报错', '#dc2626'); return; }
+    if (j.ok && j.item){
+      box.innerHTML = card(j.item);
+      setMsg('识别成功：' + j.item.category + ' · 星' + j.item.score, '#047857');
+    } else {
+      let html = '<div class="box"><h3>这条没有保留</h3><p>' + esc(j.error || '判定为不需要处理') + '</p>';
+      if (j.preview && j.preview.head){
+        html += '<div class="hint">抓到 ' + j.preview.chars + ' 字，开头是：<br>' + esc(j.preview.head) + '</div>';
+      }
+      html += '</div>';
+      box.innerHTML = html;
+      setMsg('抓到了内容，但按口径不保留', '#dc2626');
+    }
+  }, function(reason){ setMsg('触发失败：' + reason, '#dc2626'); });
+};
+
+var MORE_PANES = [ 'sites', 'trash', 'settings' ];
+function switchTab(name){
+  var tabName = MORE_PANES.indexOf(name) >= 0 ? 'archive' : name;
+  document.querySelectorAll('#tabs .tab').forEach(function(el){ el.classList.toggle('on', el.getAttribute('data-tab')===tabName); });
+  document.querySelectorAll('.pane').forEach(function(el){ el.classList.toggle('on', el.id==='pane-'+name); });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+document.getElementById('tabs').querySelectorAll('.tab').forEach(function(el){
+  el.onclick = function(){ switchTab(el.getAttribute('data-tab')); };
+});
+
+document.getElementById('draftSave').onclick = function(){
+  const box = document.getElementById('draftInput');
+  const lines = box.value.split('\n').map(function(s){ return s.trim(); }).filter(function(s){ return s; });
+  if (!lines.length) return;
+  const cur = ld(KEY_DRAFT);
+  lines.forEach(function(u){ if (cur.indexOf(u)<0) cur.push(u); });
+  sv(KEY_DRAFT, cur);
+  box.value = '';
+  renderDrafts(); counts();
+};
+
+document.getElementById('draftCopy').onclick = function(){
+  const text = ld(KEY_DRAFT).join('\n');
+  if (!text) return;
+  if (navigator.clipboard) navigator.clipboard.writeText(text).then(function(){ alert('已复制 '+ld(KEY_DRAFT).length+' 条链接'); });
+  else alert(text);
+};
+
+buildFilters();
+const qEl = document.getElementById('q');
+if (qEl){
+  qEl.oninput = function(){
+    QS = this.value.trim();
+    renderScreen();
+  };
+}
+renderScreen();
+renderContest();
+renderExam();
+renderLecture();
+renderImportant();
+renderArchive();
+renderTrash();
+renderDrafts();
+renderSites();
+bindRows();
+counts();
+if (!STORAGE_OK){
+  setTimeout(function(){ toast('这个浏览器不让存本地数据，删除只在本次打开有效', 'err'); }, 800);
+}
+var saved = tokenGet();
+const pe = document.getElementById('pushMail'); if (pe) pe.value = ld('nc_pushmail') || '';
+</script>
 </body>
 </html>
