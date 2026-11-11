@@ -1,0 +1,41 @@
+name: 手动推送留档
+
+# 两个入口：
+#   1) 网页留档库每条记录旁的「推送」按钮 —— 推那一条（传 url）
+#   2) 网页设置页的「立即推送」按钮 —— 推最新 N 条（传 count）
+on:
+  workflow_dispatch:
+    inputs:
+      count:
+        description: '推送最新几条（留空=5）'
+        required: false
+        default: '5'
+      url:
+        description: '只推这一条原文链接（留空则按条数推）'
+        required: false
+        default: ''
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 取出仓库代码
+        uses: actions/checkout@v4
+
+      - name: 准备 Node 环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 安装依赖
+        run: npm install --no-audit --no-fund
+
+      - name: 推送提炼后的留档
+        run: node push-mail.js "${{ github.event.inputs.count }}" "${{ github.event.inputs.url }}"
+        env:
+          TZ: Asia/Shanghai
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
