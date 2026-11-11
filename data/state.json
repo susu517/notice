@@ -1,2 +1,18 @@
 {
+  "seen": {
+    "https://spxy.zjgsu.edu.cn/?tzgg.html": [
+      "https://spxy.zjgsu.edu.cn/?news/7137.html",
+      "https://spxy.zjgsu.edu.cn/?news/7132.html",
+      "https://spxy.zjgsu.edu.cn/?news/7128.html",
+      "https://spxy.zjgsu.edu.cn/?news/7112.html"
+    ],
+    "https://spxy.zjgsu.edu.cn/?xgdt.html": [],
+    "https://jww.zjgsu.edu.cn/1331/list.htm": [
+      "https://jww.zjgsu.edu.cn/2026/1109/c1331a234407/page.htm",
+      "https://jww.zjgsu.edu.cn/2026/1008/c1331a232387/page.htm",
+      "https://jww.zjgsu.edu.cn/2026/0921/c1331a231694/page.htm",
+      "https://jww.zjgsu.edu.cn/2026/0923/c1331a231864/page.htm"
+    ]
+  },
+  "initialized": true
 }
