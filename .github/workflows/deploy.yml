@@ -1,0 +1,32 @@
+name: Full Deploy
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - .github/workflows/deploy.yml
+permissions:
+  contents: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download package
+        run: |
+          curl -fsSL -o /tmp/pkg.zip "https://aka.doubaocdn.com/s/zTPwcjAqqk"
+          ls -l /tmp/pkg.zip
+          unzip -oq /tmp/pkg.zip -d /tmp/pkg
+          find /tmp/pkg -maxdepth 2 -type d
+      - name: Sync files
+        run: |
+          SRC=/tmp/pkg
+          if [ -d /tmp/pkg/campus-notice ]; then SRC=/tmp/pkg/campus-notice; fi
+          echo "SRC=$SRC"
+          rsync -a --exclude='.github/' "$SRC"/ ./
+          ls -la docs | head -20
+      - name: Commit
+        run: |
+          git config user.name "deploy-bot"
+          git config user.email "deploy-bot@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then echo "nothing to commit"; else git commit -m "Deploy full package" && git push; fi
