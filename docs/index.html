@@ -121,7 +121,7 @@ footer{text-align:center;color:#9aa4b5;font-size:12px;margin-top:30px}
 <div class="wrap">
   <header>
     <h1>学院信息筛选助手</h1>
-    <div class="meta">浙江工商大学 食品与生物工程学院 · 最后更新 2026/11/12 14:27:41</div>
+    <div class="meta">浙江工商大学 食品与生物工程学院 · 最后更新 2026/11/12 14:50:54</div>
   </header>
 
   <nav class="tabs" id="tabs">
@@ -157,13 +157,15 @@ footer{text-align:center;color:#9aa4b5;font-size:12px;margin-top:30px}
     <div id="urlResult"></div>
     <div class="box">
       <h3>粘贴公众号文章链接</h3>
-      <p>把公众号文章的链接贴进来，一行一条，可以先存成待处理清单。</p>
+      <p>把公众号文章的链接贴进来，一行一条。可以先识别一下这些链接分别是什么、能不能自动抓，再存成待处理清单。</p>
       <textarea id="draftInput" placeholder="https://mp.weixin.qq.com/s/..."></textarea>
       <button class="btn" id="draftSave">存进待处理清单</button>
       <button class="btn ghost" id="draftCopy">复制全部链接</button>
+      <button class="btn ghost" id="draftCheck">识别这些链接</button>
+      <div class="hint" id="draftCheckOut" style="display:none"></div>
       <div class="hint">
-        说明：公众号按名字自动识别做不到（搜狗微信搜索被反爬拦截、第三方 RSS 服务 12 秒超时）。
-        这里先做手动粘贴。要自动抓正文并入库，需要接 Supabase 做后端，那一步等配置好再做。
+        说明：微信不允许任何服务器直接抓取公众号正文（实测带微信 UA、浏览器 UA、Referer 模拟，都会被转到「环境异常」验证页），
+        搜狗微信搜索与第三方 RSS 通道同样失效。所以公众号这里只留链接，正文需要你从微信复制后，粘贴到上方「正文内容」里提炼。
       </div>
     </div>
     <div class="box">
@@ -1715,6 +1717,33 @@ document.getElementById('draftCopy').onclick = function(){
   if (!text) return;
   if (navigator.clipboard) navigator.clipboard.writeText(text).then(function(){ alert('已复制 '+ld(KEY_DRAFT).length+' 条链接'); });
   else alert(text);
+};
+
+document.getElementById('draftCheck').onclick = function(){
+  const out = document.getElementById('draftCheckOut');
+  const raw = (document.getElementById('draftInput').value || '');
+  const lines = raw.split(String.fromCharCode(10)).map(function(s){ return s.split(String.fromCharCode(13)).join('').trim(); }).filter(function(s){ return s; });
+  out.style.display = 'block';
+  if (!lines.length){ out.innerHTML = '先贴一条链接，再点识别。'; return; }
+  const wx = [];
+  const web = [];
+  const bad = [];
+  lines.forEach(function(u, i){
+    const http = u.slice(0, 7) === 'http://' || u.slice(0, 8) === 'https://';
+    if (!http){ bad.push(i + 1); return; }
+    if (u.indexOf('mp.weixin.qq.com') > -1) wx.push([i + 1, u]);
+    else web.push([i + 1, u]);
+  });
+  let html = '<div style="margin-bottom:6px">共 ' + lines.length + ' 条：公众号 ' + wx.length + ' 条，普通网页 ' + web.length + ' 条' + (bad.length ? '，格式不对 ' + bad.length + ' 条' : '') + '。</div>';
+  wx.forEach(function(r){
+    html += '<div style="margin-top:6px">第 ' + r[0] + ' 条：<b>公众号文章</b> · 微信不允许服务器抓正文，需要打开后手动复制正文。<a href="' + esc(r[1]) + '" target="_blank" rel="noopener">打开原文</a></div>';
+  });
+  web.forEach(function(r){
+    html += '<div style="margin-top:6px">第 ' + r[0] + ' 条：<b>普通网页</b> · 可以自动抓取，复制到上方「识别网址」里用。<a href="' + esc(r[1]) + '" target="_blank" rel="noopener">打开</a></div>';
+  });
+  if (bad.length) html += '<div style="margin-top:6px">第 ' + bad.join('、') + ' 条：不是 http:// 或 https:// 开头的网址，先补全或删掉。</div>';
+  html += '<div style="margin-top:8px;color:#64748b">公众号那条的用法：点「打开原文」→ 在微信里全选复制正文 → 粘贴到上方「正文内容」框 → 点「提炼」。</div>';
+  out.innerHTML = html;
 };
 
 buildFilters();
