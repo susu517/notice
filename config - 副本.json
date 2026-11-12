@@ -1,0 +1,61 @@
+{
+  "sites": [
+    {
+      "name": "通知公告",
+      "url": "https://spxy.zjgsu.edu.cn/?tzgg.html",
+      "enabled": true
+    },
+    {
+      "name": "学生工作",
+      "url": "https://spxy.zjgsu.edu.cn/?xgdt.html",
+      "enabled": true
+    },
+    {
+      "name": "学生科技",
+      "url": "https://spxy.zjgsu.edu.cn/?xskj.html",
+      "enabled": true
+    },
+    {
+      "name": "就业信息",
+      "url": "https://spxy.zjgsu.edu.cn/?jyxx.html",
+      "enabled": true
+    },
+    {
+      "name": "研究生教学",
+      "url": "https://spxy.zjgsu.edu.cn/?yjsdt.html",
+      "enabled": true
+    },
+    {
+      "name": "党群工作",
+      "url": "https://spxy.zjgsu.edu.cn/?dqdt.html",
+      "enabled": true
+    },
+    {
+      "name": "实验管理",
+      "url": "https://spxy.zjgsu.edu.cn/?zxdt.html",
+      "enabled": false
+    },
+    {
+      "name": "学校教务",
+      "url": "https://jww.zjgsu.edu.cn/1331/list.htm",
+      "enabled": true
+    },
+    {
+      "name": "学校学工",
+      "url": "https://xsc.zjgsu.edu.cn/1826/list.htm",
+      "enabled": true
+    }
+  ],
+  "max_new_per_site": 6,
+  "site_title": "学院信息筛选助手",
+  "college": "浙江工商大学 食品与生物工程学院",
+  "ai": {
+    "enabled": true,
+    "model": "glm-4-flash",
+    "provider": "智谱 bigmodel.cn"
+  },
+  "supabase": {
+    "url": "https://dahjqedaxctiaytytdio.supabase.co",
+    "key": "sb_publishable_dBzYKy6B_K_t3P0akIc5fA_aob4vTfp"
+  }
+}
