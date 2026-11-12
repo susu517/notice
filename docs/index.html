@@ -121,7 +121,7 @@ footer{text-align:center;color:#9aa4b5;font-size:12px;margin-top:30px}
 <div class="wrap">
   <header>
     <h1>学院信息筛选助手</h1>
-    <div class="meta">浙江工商大学 食品与生物工程学院 · 最后更新 2026/11/12 15:47:46</div>
+    <div class="meta">浙江工商大学 食品与生物工程学院 · 最后更新 2026/11/12 15:51:21</div>
   </header>
 
   <nav class="tabs" id="tabs">
@@ -1691,12 +1691,50 @@ function starPickHtml(score){
   return s;
 }
 
+function catOptions(cur){
+  let s = '';
+  const list = (window.SCREENER && window.SCREENER.CATEGORIES) || [];
+  let has = false;
+  list.forEach(function(c){
+    if (c === cur) has = true;
+    s += '<option value="' + esc(c) + '"' + (c === cur ? ' selected' : '') + '>' + esc(c) + '</option>';
+  });
+  if (!has && cur) s += '<option value="' + esc(cur) + '" selected>' + esc(cur) + '</option>';
+  return s;
+}
+
+// 把编辑框里的内容收回 item，点在星星上、点应用修改之前都先走这一步
+function readManEdit(item){
+  const tEl = document.getElementById('manTitleEdit');
+  if (!tEl) return;
+  const t2 = tEl.value.trim();
+  if (t2) item.title = t2;
+  const c2 = document.getElementById('manCatEdit').value;
+  if (c2) item.category = c2;
+  item.event_time = document.getElementById('manTimeEdit').value.trim();
+  const pts = document.getElementById('manPointsEdit').value.split(String.fromCharCode(10))
+    .map(function(x){ return x.trim(); })
+    .filter(function(x){ return x.length > 0; });
+  item.key_points = pts;
+}
+
 function renderManCard(item, b, title, today){
   const box = document.getElementById('manResult');
   box.innerHTML = card(item, 'del')
     + '<div style="margin-top:12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
     + '<span style="font-size:13px;color:#5b6472">这条几星，自己点：</span>'
     + starPickHtml(item.score)
+    + '</div>'
+    + '<div style="margin-top:12px;border-top:1px dashed #d8dde5;padding-top:10px">'
+    + '<div style="font-size:13px;color:#5b6472;margin-bottom:8px">提炼得不对？这里直接改：</div>'
+    + '<input id="manTitleEdit" value="' + esc(item.title) + '" placeholder="标题" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid #d8dde5;border-radius:8px;font-size:14px;margin-bottom:8px">'
+    + '<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">'
+    + '<select id="manCatEdit" style="flex:1;min-width:110px;padding:8px;border:1px solid #d8dde5;border-radius:8px;font-size:14px">' + catOptions(item.category) + '</select>'
+    + '<input id="manTimeEdit" value="' + esc(item.event_time || '') + '" placeholder="时间，如 11月20日截止" style="flex:1;min-width:150px;padding:8px;border:1px solid #d8dde5;border-radius:8px;font-size:14px">'
+    + '</div>'
+    + '<textarea id="manPointsEdit" rows="7" placeholder="要点，一条一行" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid #d8dde5;border-radius:8px;font-size:14px;line-height:1.7">' + esc((item.key_points || []).join(String.fromCharCode(10))) + '</textarea>'
+    + '<div style="margin-top:8px"><button class="btn ghost" id="manApply" style="margin:0">应用修改</button>'
+    + '<span style="font-size:12px;color:#9aa4b2;margin-left:8px">改完点这里，卡片会跟着变</span></div>'
     + '</div>'
     + '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">'
     + '<button class="btn" id="manSave" style="margin:0">存入留档</button>'
@@ -1706,6 +1744,7 @@ function renderManCard(item, b, title, today){
 
   Array.prototype.forEach.call(box.querySelectorAll('[data-star]'), function(el){
     el.onclick = function(){
+      readManEdit(item);
       item.score = parseInt(el.getAttribute('data-star'), 10);
       lastPick = item;
       renderManCard(item, b, title, today);
@@ -1713,7 +1752,15 @@ function renderManCard(item, b, title, today){
     };
   });
 
+  document.getElementById('manApply').onclick = function(){
+    readManEdit(item);
+    lastPick = item;
+    renderManCard(item, b, title, today);
+    toast('已按你的改法更新卡片', 'ok');
+  };
+
   document.getElementById('manSave').onclick = function(){
+    readManEdit(item);
     const cur = ld(KEY_MAN) || [];
     if (!cur.some(function(n){ return keyOf(n) === keyOf(item); })) cur.unshift(item);
     sv(KEY_MAN, cur.slice(0, 300));
