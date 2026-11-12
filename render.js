@@ -241,6 +241,12 @@ function page(notices, config) {
         <button class="btn" id="ocrPick" style="margin:0">选择图片识别</button>
         <button class="btn ghost" id="ocrClear" style="display:none;margin:0">清空识别结果</button>
       </div>
+      <div style="margin-top:10px;font-size:13px;color:#5b6472">
+        准确度：<a href="javascript:;" data-lv="80" class="ocrLv" style="color:#c0392b;font-weight:700;text-decoration:none">严格 80</a>
+        <a href="javascript:;" data-lv="55" class="ocrLv" style="color:#7a8699;text-decoration:none;margin-left:8px">平衡 55</a>
+        <a href="javascript:;" data-lv="40" class="ocrLv" style="color:#7a8699;text-decoration:none;margin-left:8px">宽松 40</a>
+        <span style="color:#9aa4b2;margin-left:6px">严格档只留把握很高的字，认不出会提示你换档</span>
+      </div>
       <div class="hint" id="ocrOut">图片只在你自己的设备上识别，不会上传到服务器。</div>
     </div>
     <div class="box">
@@ -1014,6 +1020,8 @@ function triggerPush(inputs, okMsg){
 
 
 // ---------- 识别图片 → 文字（本机 OCR，图片不上传） ----------
+let ocrLevel = 80;   // 逐行置信度门槛：80 = 只留把握很高的字
+
 const OCR_CDN = [
   'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',
   'https://unpkg.com/tesseract.js@5.1.1/dist/tesseract.min.js',
@@ -1121,10 +1129,11 @@ function ocrRunFile(file, onProgress){
             let out = '';
             if (lines.length){
               const kept = lines.filter(function(L){
-                return (L.confidence || 0) >= 45 && String(L.text || '').trim().length > 1;
+                return (L.confidence || 0) >= ocrLevel && String(L.text || '').trim().length > 1;
               });
               out = kept.map(function(L){ return squeezeCn(String(L.text).trim()); }).join(String.fromCharCode(10));
-              if (!kept.length) out = squeezeCn(String((r.data && r.data.text) || '').trim());
+              // 严格档不兜底：宁可空着，也不把没把握的字塞给用户
+              if (!kept.length && ocrLevel < 80) out = squeezeCn(String((r.data && r.data.text) || '').trim());
             } else {
               out = squeezeCn(String((r.data && r.data.text) || '').trim());
             }
@@ -1169,7 +1178,7 @@ document.getElementById('ocrFile').onchange = function(){
         document.getElementById('ocrClear').style.display = 'inline-block';
         if (body.scrollIntoView) body.scrollIntoView({ behavior: 'smooth', block: 'center' });
       } else {
-        out.textContent = '没识别出文字。换张清楚的图，或者直接把文字粘贴进去。';
+        out.textContent = '严格档（' + ocrLevel + '）没识别出可信的文字。这类公众号长图多是艺术字体，点上面的「平衡 55」再识别一次。';
       }
       pickBtn.disabled = false;
       document.getElementById('ocrFile').value = '';
@@ -1197,6 +1206,19 @@ document.getElementById('ocrClear').onclick = function(){
   document.getElementById('ocrClear').style.display = 'none';
   document.getElementById('ocrOut').textContent = '图片只在你自己的设备上识别，不会上传到服务器。';
 };
+
+Array.prototype.forEach.call(document.querySelectorAll('.ocrLv'), function(a){
+  a.onclick = function(){
+    ocrLevel = parseInt(a.getAttribute('data-lv'), 10);
+    Array.prototype.forEach.call(document.querySelectorAll('.ocrLv'), function(x){
+      x.style.color = '#7a8699';
+      x.style.fontWeight = '400';
+    });
+    a.style.color = '#c0392b';
+    a.style.fontWeight = '700';
+    document.getElementById('ocrOut').textContent = '准确度已设为 ' + ocrLevel + '，再点「选择图片识别」重新识别一次。';
+  };
+});
 
 // ---------- 手动输入内容并提炼（用页面里同一套 screener 引擎） ----------
 let lastPick = null;
