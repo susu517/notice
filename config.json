@@ -57,5 +57,9 @@
   "supabase": {
     "url": "https://dahjqedaxctiaytytdio.supabase.co",
     "key": "sb_publishable_dBzYKy6B_K_t3P0akIc5fA_aob4vTfp"
+  },
+  "repo": {
+    "owner": "susu517",
+    "name": "notice"
   }
 }
