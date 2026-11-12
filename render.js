@@ -198,6 +198,9 @@ function page(notices, config) {
     college: (config && config.college) || '',
     sites: ((config && config.sites) || []).map((s) => ({ name: s.name, url: s.url, enabled: s.enabled !== false })),
     maxNew: (config && config.max_new_per_site) || 6,
+    supabase: (config && config.supabase && config.supabase.url && config.supabase.key)
+      ? { url: config.supabase.url, key: config.supabase.key }
+      : null,
   }).replace(/<\/script>/gi, '<\\/script>');
 
   return `<!doctype html>
@@ -351,10 +354,20 @@ function page(notices, config) {
       <p>收件邮箱和发件邮箱在 GitHub 仓库的 Settings → Secrets 里配置（SMTP_USER / SMTP_PASS / MAIL_TO）。</p>
     </div>
     <div class="box">
-      <h3>导出备份</h3>
-      <p>把留档库里所有数据存成一个 JSON 文件。换手机、清浏览器、或者手滑清空之后，靠这个文件能把标题、分类、时间、要点、原文链接都找回来。</p>
-      <button class="btn" onclick="exportBackup()">导出留档备份</button>
-      <div class="hint">浏览器会把它存到手机的「下载」目录。</div>
+      <h3>云端同步</h3>
+      <p>填一次 Supabase 的地址和 anon key。连上以后，收藏和自加的常用网址会存到云端，清缓存、换手机、换电脑都自动回来。</p>
+      <input type="text" id="sbUrl" placeholder="https://xxxx.supabase.co" style="width:100%;margin-bottom:8px">
+      <input type="text" id="sbKey" placeholder="anon public key（eyJ 开头那一长串）" style="width:100%;margin-bottom:8px">
+      <button class="btn" id="sbSave" style="margin:0">连接云端</button>
+      <div class="hint" id="sbState"></div>
+    </div>
+    <div class="box">
+      <h3>备份与恢复</h3>
+      <p>把留档、本机存的收藏、自己加的常用网址一起存成一个 JSON 文件。换手机、清浏览器数据、手滑清空之后，导入这个文件就能全部找回来。</p>
+      <button class="btn" onclick="exportBackup()">导出备份</button>
+      <button class="btn ghost" id="importBtn" style="margin-left:8px">导入备份</button>
+      <input type="file" id="importFile" accept=".json,application/json" style="display:none">
+      <div class="hint">导出后文件在手机的「下载」目录；恢复时点「导入备份」，选那个 JSON 文件即可。</div>
     </div>
     <div class="box">
       <h3>监视范围</h3>
@@ -424,7 +437,17 @@ function fetchtxt(n){
 function tokenGet(){ try{ return localStorage.getItem('nc_gh_token')||''; }catch(e){ return MEM['nc_gh_token']||''; } }
 function tokenSet(v){ MEM['nc_gh_token']=v; try{ localStorage.setItem('nc_gh_token', v); }catch(e){} }
 
-function alive(){ const d=ld(KEY_DEL), p=ld(KEY_PURGE); return DATA.filter(function(n){ return d.indexOf(keyOf(n))<0 && p.indexOf(keyOf(n))<0; }); }
+const KEY_MAN = 'nc_manual';
+// 本机存进去的条目 + 仓库同步下来的条目一起参与筛选；同一条不会重复出现
+function alive(){
+  const d = ld(KEY_DEL), p = ld(KEY_PURGE);
+  const base = DATA.filter(function(n){ return d.indexOf(keyOf(n))<0 && p.indexOf(keyOf(n))<0; });
+  const local = (ld(KEY_MAN) || []).filter(function(n){
+    const k = keyOf(n);
+    return d.indexOf(k) < 0 && !base.some(function(x){ return keyOf(x) === k; });
+  });
+  return local.concat(base);
+}
 function dead(){ const d=ld(KEY_DEL), p=ld(KEY_PURGE); return DATA.filter(function(n){ return d.indexOf(keyOf(n))>=0 && p.indexOf(keyOf(n))<0; }); }
 
 function card(n, action){
@@ -523,7 +546,13 @@ function exportBackup(){
     exported_at: new Date().toISOString(),
     total: alive().length,
     notices: alive(),
-    trash: (typeof dead === 'function' ? dead() : [])
+    trash: (typeof dead === 'function' ? dead() : []),
+    // 下面这些只存在本机，清缓存会丢，所以一起打进备份文件
+    manual: ld(KEY_MAN) || [],
+    sites: ld(KEY_SITES) || [],
+    deleted: ld(KEY_DEL) || [],
+    draft: ld(KEY_DRAFT) || [],
+    pushmail: ld('nc_pushmail') || ''
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
@@ -533,7 +562,29 @@ function exportBackup(){
   a.click();
   document.body.removeChild(a);
   setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1500);
-  toast('已导出 ' + data.total + ' 条');
+  toast('已导出：留档 ' + data.total + ' 条 · 本机收藏 ' + data.manual.length + ' 条 · 自加网址 ' + data.sites.length + ' 个');
+}
+
+function importBackup(file){
+  if (!file) return;
+  const fr = new FileReader();
+  fr.onload = function(){
+    let j = null;
+    try { j = JSON.parse(String(fr.result)); } catch(e){ toast('这个文件不是备份文件', 'err'); return; }
+    if (!j || typeof j !== 'object'){ toast('备份文件是空的', 'err'); return; }
+
+    let n = 0;
+    if (Array.isArray(j.manual)){ sv(KEY_MAN, j.manual); n = j.manual.length; }
+    if (Array.isArray(j.sites)){ sv(KEY_SITES, j.sites); }
+    if (Array.isArray(j.deleted)){ sv(KEY_DEL, j.deleted); }
+    if (Array.isArray(j.draft)){ sv(KEY_DRAFT, j.draft); }
+    if (j.pushmail) sv('nc_pushmail', j.pushmail);
+
+    try { renderSites(); renderScreen(); renderArchive(); renderDrafts(); counts(); } catch(e){}
+    toast('已恢复：本机收藏 ' + n + ' 条 · 自加网址 ' + ((j.sites || []).length) + ' 个');
+  };
+  fr.onerror = function(){ toast('文件读取失败', 'err'); };
+  fr.readAsText(file);
 }
 
 function renderArchive(){
@@ -571,12 +622,135 @@ function renderDrafts(){
   });
 }
 
+// ---------- 云端同步（Supabase）----------
+// 没配置就是 null，一切照旧只存本机；配了就从云端拉、把本机独有的推上去
+const SB = (function(){
+  try {
+    if (CFG.supabase && CFG.supabase.url && CFG.supabase.key) return CFG.supabase;
+  } catch(e){}
+  const u = ld('nc_sb_url'), k = ld('nc_sb_key');
+  if (u && k) return { url: u, key: k };
+  return null;
+})();
+
+function sbBase(){
+  let s = String(SB.url);
+  while (s.length && s.charAt(s.length - 1) === '/') s = s.slice(0, -1);
+  const cut = s.indexOf('/rest/v1');
+  if (cut > 0) s = s.slice(0, cut);
+  return s;
+}
+function sbHead(){
+  return { 'apikey': SB.key, 'Authorization': 'Bearer ' + SB.key, 'Content-Type': 'application/json' };
+}
+
+async function sbPull(){
+  if (!SB) return null;
+  try {
+    const res = await fetch(sbBase() + '/rest/v1/nc_items?select=kind,key,payload&order=created_at.asc', { headers: sbHead() });
+    if (!res.ok) return null;
+    const rows = await res.json();
+    const notes = [], sites = [];
+    (rows || []).forEach(function(r){
+      if (r.kind === 'note') notes.push(r.payload);
+      else if (r.kind === 'site') sites.push(r.payload);
+    });
+    return { notes: notes, sites: sites };
+  } catch(e){ return null; }
+}
+
+async function sbPush(kind, key, payload){
+  if (!SB) return false;
+  try {
+    const res = await fetch(sbBase() + '/rest/v1/nc_items', {
+      method: 'POST',
+      headers: Object.assign(sbHead(), { 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
+      body: JSON.stringify([{ kind: kind, key: key, payload: payload }])
+    });
+    return res.ok;
+  } catch(e){ return false; }
+}
+
+async function sbDel(kind, key){
+  if (!SB) return false;
+  try {
+    const res = await fetch(sbBase() + '/rest/v1/nc_items?kind=eq.' + encodeURIComponent(kind) + '&key=eq.' + encodeURIComponent(key), { method: 'DELETE', headers: sbHead() });
+    return res.ok;
+  } catch(e){ return false; }
+}
+
+// 打开页面就对一次账：云端有的拉回来，本机独有的推上去（原有的数据也一并带上）
+async function syncCloud(){
+  if (!SB) return;
+  const cloud = await sbPull();
+  if (!cloud) return;
+
+  const cloudNotes = cloud.notes || [];
+  const cloudSites = cloud.sites || [];
+  const localNotes = ld(KEY_MAN) || [];
+  const localSites = ld(KEY_SITES) || [];
+
+  if (cloudNotes.length){
+    const merged = cloudNotes.slice();
+    localNotes.forEach(function(n){
+      if (!merged.some(function(x){ return keyOf(x) === keyOf(n); })) merged.push(n);
+    });
+    sv(KEY_MAN, merged.slice(0, 300));
+  }
+  if (cloudSites.length){
+    const merged2 = cloudSites.slice();
+    localSites.forEach(function(s){
+      if (!merged2.some(function(x){ return x.url === s.url; })) merged2.push(s);
+    });
+    sv(KEY_SITES, merged2);
+  }
+
+  for (const n of localNotes){
+    if (!cloudNotes.some(function(x){ return keyOf(x) === keyOf(n); })) await sbPush('note', keyOf(n), n);
+  }
+  for (const s of localSites){
+    if (!cloudSites.some(function(x){ return x.url === s.url; })) await sbPush('site', s.url, s);
+  }
+
+  try { renderSites(); renderScreen(); renderArchive(); counts(); } catch(e){}
+}
+
+const KEY_SITES = 'nc_sites';
+// 仓库里的栏目 + 本机自己加的栏目（同一网址只出现一次）
+function allSites(){
+  const base = (CFG.sites || []).slice();
+  const local = ld(KEY_SITES) || [];
+  return base.concat(local.filter(function(s){
+    return !base.some(function(b){ return b.url === s.url; });
+  }));
+}
+
 function renderSites(){
-  const list = CFG.sites || [];
+  const list = allSites();
+  const localUrls = (ld(KEY_SITES) || []).map(function(s){ return s.url; });
   const rows = list.map(function(s){
-    return '<tr><td>'+esc(s.name)+'</td><td style="word-break:break-all;color:#6b7280">'+esc(s.url)+'</td><td>'+(s.enabled===false?'已停用':'监控中')+'</td></tr>';
+    const isLocal = localUrls.indexOf(s.url) >= 0;
+    return '<tr><td>'+esc(s.name)+'</td>'
+      + '<td style="word-break:break-all;color:#6b7280">'+esc(s.url)+'</td>'
+      + '<td>'+(s.enabled===false?'已停用':'监控中')+'</td>'
+      + '<td>'+(isLocal
+        ? '<button class="del" style="padding:3px 10px;font-size:12px" data-delsite="'+esc(s.url)+'">删除</button>'
+        : '<span style="color:#9ca3af;font-size:12px">仓库自带</span>')
+      + '</td></tr>';
   }).join('');
-  document.getElementById('siteTable').innerHTML = '<tr><th>栏目</th><th>地址</th><th>状态</th></tr>'+rows;
+  document.getElementById('siteTable').innerHTML = '<tr><th>栏目</th><th>地址</th><th>状态</th><th>操作</th></tr>'+rows;
+
+  document.querySelectorAll('#siteTable [data-delsite]').forEach(function(b){
+    b.onclick = function(){
+      const u = b.getAttribute('data-delsite');
+      const cur = (ld(KEY_SITES) || []).filter(function(x){ return x.url !== u; });
+      sv(KEY_SITES, cur);
+      sbDel('site', u);
+      renderSites();
+      toast('已删除这个收藏', 'ok');
+    };
+  });
+
   const on = list.filter(function(s){ return s.enabled!==false; }).length;
   document.getElementById('bSites').textContent = on;
   document.getElementById('bSites2').textContent = on;
@@ -858,10 +1032,38 @@ document.getElementById('manRun').onclick = function(){
     return;
   }
 
-  const item = Object.assign({}, r, { title: title, site: '手动输入', published_at: today });
+  const item = Object.assign({}, r, {
+    title: title,
+    site: '手动输入',
+    published_at: today,
+    url: 'local:' + Date.now(),
+    content: String(b).slice(0, 1600),
+    engine: 'extract',
+  });
   lastPick = item;
-  box.innerHTML = card(item);
+  box.innerHTML = card(item, 'del')
+    + '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">'
+    + '<button class="btn" id="manSave" style="margin:0">存入留档</button>'
+    + '<button class="btn" id="manDrop" style="margin:0">删除这条</button>'
+    + '</div>';
   document.getElementById('manCopy').style.display = 'inline-block';
+  document.getElementById('manSave').onclick = function(){
+    const cur = ld(KEY_MAN) || [];
+    if (!cur.some(function(n){ return keyOf(n) === keyOf(item); })) cur.unshift(item);
+    sv(KEY_MAN, cur.slice(0, 300));
+    sbPush('note', keyOf(item), item);
+    toast(SB ? '已存入留档：云端和本机都存了' : '已存入留档（保存在这台设备的浏览器里）', 'ok');
+    renderScreen(); renderArchive(); counts();
+  };
+  document.getElementById('manDrop').onclick = function(){
+    const cur = (ld(KEY_MAN) || []).filter(function(n){ return keyOf(n) !== keyOf(item); });
+    sv(KEY_MAN, cur);
+    sbDel('note', keyOf(item));
+    box.innerHTML = '';
+    document.getElementById('manCopy').style.display = 'none';
+    toast('已删除', 'ok');
+    renderScreen(); renderArchive(); counts();
+  };
   toast('提炼完成：' + item.category + ' · ' + stars(item.score), 'ok');
 };
 
@@ -883,11 +1085,22 @@ async function addSite(name, url){
 
   const setMsg = function(msg, color){ st.textContent = msg; st.style.color = color || '#9ca3af'; };
 
-  if (!token){ setMsg('先在「推送与设置」填 GitHub Token，才能把网址写进仓库', '#dc2626'); return; }
-  if (!repo || !repo.repo){ setMsg('这个页面不是从 GitHub Pages 打开的，加不了', '#dc2626'); return; }
   if (!name || !url){ setMsg('栏目名和网址都要填', '#dc2626'); return; }
   if (!/^https?:\\/\\//i.test(url)){ setMsg('网址要 http:// 或 https:// 开头', '#dc2626'); return; }
-  if ((CFG.sites || []).some(function(x){ return x.url === url; })){ setMsg('这个网址已经在清单里了', '#dc2626'); return; }
+  if (allSites().some(function(x){ return x.url === url; })){ setMsg('这个网址已经在清单里了', '#dc2626'); return; }
+
+  // 没有令牌（或页面不是从 GitHub Pages 打开）：存下来，立刻生效
+  if (!token || !repo || !repo.repo){
+    const obj = { name: name, url: url, enabled: true };
+    const cur = ld(KEY_SITES) || [];
+    cur.push(obj);
+    sv(KEY_SITES, cur.slice(0, 100));
+    sbPush('site', url, obj);
+    renderSites();
+    setMsg(SB ? '已添加，云端已经同步' : '已加到本机收藏，这台设备上立刻生效', '#047857');
+    toast('已添加：' + name, 'ok');
+    return;
+  }
 
   setMsg('正在写入仓库 config.json…', '#6b7280');
   try {
@@ -923,6 +1136,32 @@ async function addSite(name, url){
   }
 }
 
+document.getElementById('importBtn').onclick = function(){
+  document.getElementById('importFile').click();
+};
+
+// 云端同步：设置页填地址与 key，填完立刻重连
+(function(){
+  const u = document.getElementById('sbUrl'), k = document.getElementById('sbKey'), st = document.getElementById('sbState');
+  if (!u || !k) return;
+  const su = ld('nc_sb_url'), sk = ld('nc_sb_key');
+  if (su) u.value = su;
+  if (sk) k.value = sk;
+  if (st) st.textContent = SB ? '已连接：收藏和常用网址会同步到云端' : '还没配置，目前只存在这台设备里';
+  document.getElementById('sbSave').onclick = function(){
+    const a = u.value.trim(), b = k.value.trim();
+    if (!a || !b){ toast('地址和 key 都要填', 'err'); return; }
+    if (!/^https?:\\/\\//i.test(a)){ toast('地址要以 https:// 开头', 'err'); return; }
+    sv('nc_sb_url', a); sv('nc_sb_key', b);
+    toast('已保存，正在连云端…', 'ok');
+    setTimeout(function(){ location.reload(); }, 900);
+  };
+})();
+document.getElementById('importFile').onchange = function(){
+  importBackup(this.files && this.files[0]);
+  this.value = '';
+};
+
 document.getElementById('siteAdd').onclick = function(){
   addSite(document.getElementById('siteName').value.trim(), document.getElementById('siteUrl').value.trim());
 };
@@ -943,6 +1182,35 @@ async function waitExtract(sinceISO){
   return null;
 }
 
+// 识别结果只在本页显示一次，不自动入库；用户点「存入留档」才留下来
+function showExtractResult(raw){
+  const box = document.getElementById('urlResult');
+  const item = Object.assign({}, raw);
+  if (!item.url) item.url = 'local:' + Date.now();
+  box.innerHTML = card(item, 'del')
+    + '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
+    + '<button class="btn" id="extSave" style="margin:0">存入留档</button>'
+    + '<button class="btn" id="extDrop" style="margin:0">删除这条</button>'
+    + '<span class="hint" style="margin:0">不存的话，关掉页面就没了</span>'
+    + '</div>';
+  document.getElementById('extSave').onclick = function(){
+    const cur = ld(KEY_MAN) || [];
+    if (!cur.some(function(n){ return keyOf(n) === keyOf(item); })) cur.unshift(item);
+    sv(KEY_MAN, cur.slice(0, 300));
+    sbPush('note', keyOf(item), item);
+    toast(SB ? '已存入留档：云端和本机都存了' : '已存入留档（保存在这台设备的浏览器里）', 'ok');
+    renderScreen(); renderArchive(); counts();
+  };
+  document.getElementById('extDrop').onclick = function(){
+    const cur = (ld(KEY_MAN) || []).filter(function(n){ return keyOf(n) !== keyOf(item); });
+    sv(KEY_MAN, cur);
+    sbDel('note', keyOf(item));
+    box.innerHTML = '';
+    toast('已删除，这条不再显示', 'ok');
+    renderScreen(); renderArchive(); counts();
+  };
+}
+
 document.getElementById('urlRun').onclick = function(){
   const url = document.getElementById('urlInput').value.trim();
   const st = document.getElementById('urlStatus');
@@ -950,19 +1218,50 @@ document.getElementById('urlRun').onclick = function(){
   const setMsg = function(msg, color){ st.textContent = msg; st.style.color = color || '#9ca3af'; };
 
   if (!url || !/^https?:\\/\\//i.test(url)){ setMsg('先贴一个 http:// 或 https:// 开头的链接', '#dc2626'); return; }
-  if (!ghRepo() || !ghRepo().repo){ setMsg('这个页面不是从 GitHub Pages 打开的，识别功能用不了', '#dc2626'); return; }
-  if (!tokenGet()){ setMsg('先在「推送与设置」填 GitHub Token', '#dc2626'); return; }
+  const repo = ghRepo();
+  if (!repo || !repo.repo){ setMsg('这个页面不是从 GitHub Pages 打开的，识别功能用不了', '#dc2626'); return; }
 
+  // 有令牌：直接触发（自动路径）
+  if (tokenGet()){
+    const since = new Date().toISOString();
+    box.innerHTML = '';
+    setMsg('已提交，GitHub 正在抓取…大约等 1 分钟', '#6b7280');
+    runWorkflow('extract.yml', { url: url }, async function(){
+      const j = await waitExtract(since);
+      if (!j){ setMsg('等了 2 分钟还没结果，去仓库 Actions 页面看看「识别网址」任务有没有报错', '#dc2626'); return; }
+      if (j.ok && j.item){
+        showExtractResult(j.item);
+        setMsg('识别成功：' + j.item.category + ' · 星' + j.item.score + '（只在本次显示，想留就点「存入留档」）', '#047857');
+      } else {
+        let html = '<div class="box"><h3>这条没有保留</h3><p>' + esc(j.error || '判定为不需要处理') + '</p>';
+        if (j.preview && j.preview.head){
+          html += '<div class="hint">抓到 ' + j.preview.chars + ' 字，开头是：<br>' + esc(j.preview.head) + '</div>';
+        }
+        html += '</div>';
+        box.innerHTML = html;
+        setMsg('抓到了内容，但按口径不保留', '#dc2626');
+      }
+    }, function(reason){ setMsg('触发失败：' + reason, '#dc2626'); });
+    return;
+  }
+
+  // 没有令牌：复制链接 + 去 GitHub 点一下（不需要令牌）
   const since = new Date().toISOString();
-  box.innerHTML = '';
-  setMsg('已提交，GitHub 正在抓取…大约等 1 分钟', '#6b7280');
+  if (navigator.clipboard) { navigator.clipboard.writeText(url).catch(function(){}); }
+  const actionsUrl = 'https://github.com/' + repo.owner + '/' + repo.repo + '/actions/workflows/extract.yml';
+  box.innerHTML = '<div class="box"><h3>还差一步：去 GitHub 点一下「运行」</h3>'
+    + '<p>链接已经帮你复制好了。点下面按钮打开 GitHub → 在页面右侧点 <b>Run workflow</b> → 把链接粘到 <b>url</b> 框里 → 再点绿色 <b>Run workflow</b>。</p>'
+    + '<p style="margin-top:8px">大约 1 分钟跑完，结果会显示在下面，<b>不会自动进留档</b>；要留就点「存入留档」。这个流程<b>不需要任何令牌</b>。</p>'
+    + '<div style="margin-top:12px"><a class="btn" style="margin:0;display:inline-block" href="' + actionsUrl + '" target="_blank" rel="noopener">打开 GitHub 运行识别 →</a></div>'
+    + '<div class="hint" style="margin-top:10px">公众号文章有时会被拦，如果提示抓到 0 字，把正文复制到下面「手动输入内容并提炼」也能用。</div></div>';
+  setMsg('链接已复制，正在等 GitHub 跑完…', '#6b7280');
 
-  runWorkflow('extract.yml', { url: url }, async function(){
+  (async function(){
     const j = await waitExtract(since);
-    if (!j){ setMsg('等了 2 分钟还没结果，去仓库 Actions 页面看看「识别网址」任务有没有报错', '#dc2626'); return; }
+    if (!j) { setMsg('没等到结果：确认 GitHub 上那个任务真的跑完了（绿色的勾）', '#dc2626'); return; }
     if (j.ok && j.item){
-      box.innerHTML = card(j.item);
-      setMsg('识别成功：' + j.item.category + ' · 星' + j.item.score, '#047857');
+      showExtractResult(j.item);
+      setMsg('识别成功：' + j.item.category + ' · 星' + j.item.score + '（只在本次显示，想留就点「存入留档」）', '#047857');
     } else {
       let html = '<div class="box"><h3>这条没有保留</h3><p>' + esc(j.error || '判定为不需要处理') + '</p>';
       if (j.preview && j.preview.head){
@@ -972,7 +1271,7 @@ document.getElementById('urlRun').onclick = function(){
       box.innerHTML = html;
       setMsg('抓到了内容，但按口径不保留', '#dc2626');
     }
-  }, function(reason){ setMsg('触发失败：' + reason, '#dc2626'); });
+  })();
 };
 
 var MORE_PANES = [ 'sites', 'trash', 'settings' ];
@@ -1022,6 +1321,8 @@ renderArchive();
 renderTrash();
 renderDrafts();
 renderSites();
+// 有云端配置就和云端对一次账（没配置就是空操作）
+syncCloud();
 bindRows();
 counts();
 if (!STORAGE_OK){
