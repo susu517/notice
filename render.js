@@ -201,6 +201,9 @@ function page(notices, config) {
     supabase: (config && config.supabase && config.supabase.url && config.supabase.key)
       ? { url: config.supabase.url, key: config.supabase.key }
       : null,
+    repo: (config && config.repo && config.repo.owner && config.repo.name)
+      ? { owner: config.repo.owner, name: config.repo.name }
+      : null,
   }).replace(/<\/script>/gi, '<\\/script>');
 
   return `<!doctype html>
@@ -904,10 +907,11 @@ function bindRows(){
 }
 
 function ghRepo(){
-  const h = location.hostname;
-  if (!/^\w+\.github\.io$/.test(h)) return null;
-  const seg = location.pathname.split('/').filter(Boolean);
-  return { owner: h.replace(/\.github\.io$/,''), repo: seg[0] || '' };
+  if (CFG.repo && CFG.repo.owner && CFG.repo.name) return { owner: CFG.repo.owner, repo: CFG.repo.name };
+  const h = location.hostname || '';
+  if (h.slice(-10) !== '.github.io') return null;
+  const seg = (location.pathname || '/').split('/').filter(Boolean);
+  return { owner: h.slice(0, -10), repo: seg[0] || '' };
 }
 
 function setStatus(msg, color){
