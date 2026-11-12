@@ -21,6 +21,10 @@ const ARTICLE_URL = [
   /\/\d+\/c\d+a\d+\/page\.htm$/,   // 同上，无年份
 ];
 
+// 微信公众号：正文容器固定是 #js_content，发布时间写在 var createTime = "YYYY-MM-DD HH:MM"
+const WX_URL = /mp\.weixin\.qq\.com|weixin\.qq\.com/i;
+const WX_BLOCKED = /环境异常|请在微信客户端打开|访问过于频繁|操作频繁|该内容已被发布者删除/;
+
 /* ==================== 基础请求 ==================== */
 
 async function fetchHtml(url, retries = 2) {
@@ -144,20 +148,34 @@ function cleanLines(text) {
  */
 function parseDetail(html, url) {
   const $ = cheerio.load(html);
+  const isWx = WX_URL.test(String(url));
+
+  // 微信对机房 IP 有风控，被拦时拿到的是约 1.8 万字节的提示页，正文里几乎没有中文
+  if (isWx && WX_BLOCKED.test(html)) {
+    throw new Error('微信拦了这台服务器（环境异常提示页），这条只能在你自己网络下打开');
+  }
 
   // 先把脚本、样式、导航这些干扰整块拆掉
   $('script, style, noscript').remove();
   $('.nav, ._menu, .layout, ._header, .toplink, .lyear-layout-sidebar-scroll, .wrap.hide').remove();
 
-  // 标题：<title> 最可靠（站点常写成「标题|学院名」）
-  let title = $('title').text().trim()
-    .replace(/[|｜].*$/, '')
-    .replace(/[-_]\s*(浙江工商大学|食品与生物工程学院).*$/, '')
-    .trim();
+  // 标题：公众号优先用 og:title（微信 <title> 常常带后缀），其余站点用 <title>
+  let title = '';
+  if (isWx) {
+    title = ($('meta[property="og:title"]').attr('content') || '').trim()
+      || $('#activity-name').text().trim();
+  }
+  if (!title) {
+    title = $('title').text().trim()
+      .replace(/[|｜].*$/, '')
+      .replace(/[-_]\s*(浙江工商大学|食品与生物工程学院).*$/, '')
+      .trim();
+  }
   if (!title) title = $('h1').first().text().trim();
 
   // 正文容器：按常见结构依次尝试，取中文最多的那个
   const selectors = [
+    '#js_content',             // 微信公众号
     '.wp_articlecontent',      // 教务处 / 学生处
     '.Article_content',        // 部分校级站
     '.article',                // 教务处
@@ -179,8 +197,12 @@ function parseDetail(html, url) {
     }
   }
 
-  // 发布时间：正文顶部常带 2026-11-09，URL 里也可能有
+  // 发布时间：公众号读页面里的 createTime，其余站点从正文头部或 URL 找
   let published = '';
+  if (isWx) {
+    const cm = html.match(/createTime\s*=\s*[^\d]{0,3}(20\d{2}-\d{2}-\d{2})/);
+    if (cm) published = cm[1];
+  }
   const pageHead = cleanLines($('title').text() + '\n' + body).slice(0, 400);
   const dm = pageHead.match(/(20\d{2})-(\d{2})-(\d{2})/)
     || pageHead.match(/(20\d{2})年(\d{1,2})月(\d{1,2})日/);

@@ -28,6 +28,7 @@ async function main() {
   } else {
     try {
       const html = await crawler.fetchHtml(url);
+      result.html_chars = String(html).length;
       const detail = crawler.parseDetail(html, url);
       const title = detail.title || '';
       const content = detail.content || '';
