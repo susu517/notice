@@ -1,0 +1,32 @@
+name: AI 提炼队列
+
+# 页面把「待 AI 提炼」的任务写进 Supabase 的 nc_items，这个 workflow 每 5 分钟扫一次，
+# 调智谱 AI 处理完写回结果，页面轮询到结果后自动替换成 AI 版。
+# 用 Actions 是因为它不用额外账号、也不用把智谱 key 放进公开网页。
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ai-screen
+  cancel-in-progress: false
+
+jobs:
+  screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 处理待提炼任务
+        env:
+          ZHIPU_KEY: ${{ secrets.ZHIPU_KEY }}
+          SB_URL: https://dahjqedaxctiaytytdio.supabase.co
+          SB_KEY: sb_publishable_dBzYKy6B_K_t3P0akIc5fA_aob4vTfp
+        run: node ai-screen.js
