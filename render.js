@@ -234,8 +234,18 @@ function page(notices, config) {
   <div class="pane" id="pane-add">
     <div class="backbar"><button class="back" onclick="switchTab('archive')">← 返回</button></div>
     <div class="box">
+      <h3>识别图片里的通知</h3>
+      <p>通知截图、公众号长图、群消息截图，选图后在本机识别成文字，自动填进下面的正文框，再点提炼。</p>
+      <input type="file" id="ocrFile" accept="image/*" multiple style="display:none">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="btn" id="ocrPick" style="margin:0">选择图片识别</button>
+        <button class="btn ghost" id="ocrClear" style="display:none;margin:0">清空识别结果</button>
+      </div>
+      <div class="hint" id="ocrOut">图片只在你自己的设备上识别，不会上传到服务器。</div>
+    </div>
+    <div class="box">
       <h3>手动输入内容并提炼</h3>
-      <p>把通知文字整段贴进来，用和自动抓取完全一样的一套口径现场提炼：分类、星级、时间、要点。</p>
+      <p>把通知文字整段贴进来，在本机按同一套规则现场提炼分类、星级、时间、要点。这一步不联网、不上传你的文字；后台定时抓取那条链路才会调 AI。</p>
       <input type="text" id="manTitle" placeholder="标题（可留空，会取正文第一行）" style="width:100%;margin-bottom:8px">
       <textarea id="manBody" placeholder="正文内容贴在这里…"></textarea>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px">
@@ -1003,6 +1013,141 @@ function triggerPush(inputs, okMsg){
 
 
 
+// ---------- 识别图片 → 文字（本机 OCR，图片不上传） ----------
+const OCR_CDN = [
+  'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',
+  'https://unpkg.com/tesseract.js@5.1.1/dist/tesseract.min.js',
+  'https://lib.baomitu.com/tesseract.js/5.1.1/tesseract.min.js'
+];
+let ocrPending = null;
+
+function loadOcr(){
+  if (window.Tesseract) return Promise.resolve(window.Tesseract);
+  if (ocrPending) return ocrPending;
+  ocrPending = new Promise(function(resolve, reject){
+    let i = 0;
+    function next(){
+      if (i >= OCR_CDN.length){
+        reject(new Error('识别引擎加载失败，网络不好时可以先跳过图片，直接把文字粘贴进去'));
+        return;
+      }
+      const s = document.createElement('script');
+      s.src = OCR_CDN[i++];
+      s.onload = function(){ window.Tesseract ? resolve(window.Tesseract) : next(); };
+      s.onerror = next;
+      document.head.appendChild(s);
+    }
+    next();
+  });
+  return ocrPending;
+}
+
+function ocrSlice(img, sy, sh){
+  const scale = Math.min(1, 1600 / img.naturalWidth);
+  const w = Math.round(img.naturalWidth * scale);
+  const h = Math.round(sh * scale);
+  const cv = document.createElement('canvas');
+  cv.width = w;
+  cv.height = h;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, w, h);
+  ctx.drawImage(img, 0, sy, img.naturalWidth, sh, 0, 0, w, h);
+  return cv;
+}
+
+function ocrRunFile(file, onProgress){
+  return loadOcr().then(function(T){
+    const objUrl = URL.createObjectURL(file);
+    const img = new Image();
+    const loaded = new Promise(function(res, rej){
+      img.onload = function(){ res(img); };
+      img.onerror = function(){ rej(new Error('这张图打不开')); };
+    });
+    img.src = objUrl;
+    return loaded.then(function(){
+      const total = img.naturalHeight;
+      const step = 1600;
+      const overlap = 80;
+      const parts = [];
+      let y = 0;
+      function stepOnce(){
+        if (y >= total){
+          URL.revokeObjectURL(objUrl);
+          return Promise.resolve(parts.join(String.fromCharCode(10)));
+        }
+        const sh = Math.min(step + overlap, total - y);
+        const cv = ocrSlice(img, y, sh);
+        return T.recognize(cv, 'chi_sim', {
+          logger: function(m){
+            if (m.status === 'recognizing text' && onProgress){
+              onProgress(Math.round(m.progress * 100), Math.min(total, y + sh), total);
+            }
+          }
+        }).then(function(r){
+          const t = String((r.data && r.data.text) || '').trim();
+          if (t) parts.push(t);
+          y += step;
+          return stepOnce();
+        });
+      }
+      return stepOnce();
+    });
+  });
+}
+
+document.getElementById('ocrPick').onclick = function(){
+  document.getElementById('ocrFile').click();
+};
+
+document.getElementById('ocrFile').onchange = function(){
+  const files = Array.prototype.slice.call(this.files || []);
+  if (!files.length) return;
+  const out = document.getElementById('ocrOut');
+  const pickBtn = document.getElementById('ocrPick');
+  pickBtn.disabled = true;
+  out.style.color = '#0f172a';
+  let k = 0;
+  const pieces = [];
+  function nextFile(){
+    if (k >= files.length){
+      const all = pieces.join(String.fromCharCode(10) + String.fromCharCode(10));
+      const body = document.getElementById('manBody');
+      if (all){
+        body.value = all;
+        out.textContent = '识别完成，共 ' + all.length + ' 字，已填进下面的正文框。有错字就手动改一下，再点提炼。';
+        document.getElementById('ocrClear').style.display = 'inline-block';
+        if (body.scrollIntoView) body.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else {
+        out.textContent = '没识别出文字。换张清楚的图，或者直接把文字粘贴进去。';
+      }
+      pickBtn.disabled = false;
+      document.getElementById('ocrFile').value = '';
+      return;
+    }
+    const one = files[k];
+    out.textContent = '正在识别第 ' + (k + 1) + '/' + files.length + ' 张…首次使用要下载中文语言包，大约 15MB，只下这一次。';
+    ocrRunFile(one, function(pct, done, total){
+      out.textContent = '第 ' + (k + 1) + '/' + files.length + ' 张识别中 ' + pct + '% · 进度 ' + done + '/' + total + ' 像素';
+    }).then(function(text){
+      if (text) pieces.push(text);
+      k++;
+      nextFile();
+    }).catch(function(e){
+      out.textContent = '识别失败：' + (e && e.message ? e.message : e);
+      pickBtn.disabled = false;
+      document.getElementById('ocrFile').value = '';
+    });
+  }
+  nextFile();
+};
+
+document.getElementById('ocrClear').onclick = function(){
+  document.getElementById('manBody').value = '';
+  document.getElementById('ocrClear').style.display = 'none';
+  document.getElementById('ocrOut').textContent = '图片只在你自己的设备上识别，不会上传到服务器。';
+};
+
 // ---------- 手动输入内容并提炼（用页面里同一套 screener 引擎） ----------
 let lastPick = null;
 
@@ -1034,10 +1179,21 @@ document.getElementById('manRun').onclick = function(){
     document.getElementById('manCopy').style.display = 'none';
     box.innerHTML = '<div class="box"><h3>判定：这条不用管</h3>'
       + '<p>按现在的口径，这条属于社团招新、日常活动宣传、节日问候、纯喜报、活动总结、报道稿或已过期通知一类的，不保留。</p>'
-      + '<div class="hint">想强制保留的话，把标题里的关键信息写清楚些（比如带上「报名」「考试」「截止」「竞赛」这类词），再提炼一次。</div></div>';
+      + '<div class="hint">想让它留下来，可以改标题再试一次；也可以直接点下面的按钮跳过这条判定，自己决定留不留。</div>'
+      + '<div style="margin-top:10px"><button class="btn ghost" id="manForce" style="margin:0">还是保留这条</button></div></div>';
+    document.getElementById('manForce').onclick = function(){
+      const forced = window.SCREENER.screenOne({ title: title, url: '', content: b, published_at: today }, { force: true });
+      if (!forced){ toast('内容太少，提不出东西，再多贴一点', 'err'); return; }
+      showManResult(forced, b, title, today);
+    };
     return;
   }
 
+  showManResult(r, b, title, today);
+};
+
+function showManResult(r, b, title, today){
+  const box = document.getElementById('manResult');
   const item = Object.assign({}, r, {
     title: title,
     site: '手动输入',
@@ -1071,7 +1227,7 @@ document.getElementById('manRun').onclick = function(){
     renderScreen(); renderArchive(); counts();
   };
   toast('提炼完成：' + item.category + ' · ' + stars(item.score), 'ok');
-};
+}
 
 document.getElementById('manCopy').onclick = function(){
   if (!lastPick) return;
