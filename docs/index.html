@@ -121,7 +121,7 @@ footer{text-align:center;color:#9aa4b5;font-size:12px;margin-top:30px}
 <div class="wrap">
   <header>
     <h1>学院信息筛选助手</h1>
-    <div class="meta">浙江工商大学 食品与生物工程学院 · 最后更新 2026/11/12 15:23:09</div>
+    <div class="meta">浙江工商大学 食品与生物工程学院 · 最后更新 2026/11/12 15:30:08</div>
   </header>
 
   <nav class="tabs" id="tabs">
@@ -1459,10 +1459,33 @@ function loadOcr(){
   return ocrPending;
 }
 
+function isCnChar(ch){
+  const c = ch.charCodeAt(0);
+  return c >= 19968 && c <= 40959;
+}
+
+// 识别结果里每个汉字之间都会插空格（"浙江 工商 大 学"），压掉汉字之间的空格，
+// 汉字与数字、字母之间保留，避免把"报名 11月20日"粘成一串。
+function squeezeCn(s){
+  let out = '';
+  for (let i = 0; i < s.length; i++){
+    const ch = s.charAt(i);
+    if (ch === ' ' || ch.charCodeAt(0) === 12288){
+      const prev = out.charAt(out.length - 1);
+      const nxt = s.charAt(i + 1);
+      if (prev && nxt && isCnChar(prev) && isCnChar(nxt)) continue;
+    }
+    out += ch;
+  }
+  return out;
+}
+
 function ocrSlice(img, sy, sh){
-  const scale = Math.min(1, 1600 / img.naturalWidth);
-  const w = Math.round(img.naturalWidth * scale);
-  const h = Math.round(sh * scale);
+  // 实测：这张公众号长图放大两倍后置信度从 60 提到 67，错字也少一些。
+  // 原图本来就很宽时不再放大，免得 canvas 太大拖慢浏览器。
+  const up = img.naturalWidth > 1600 ? 1 : 2;
+  const w = Math.round(img.naturalWidth * up);
+  const h = Math.round(sh * up);
   const cv = document.createElement('canvas');
   cv.width = w;
   cv.height = h;
@@ -1483,32 +1506,59 @@ function ocrRunFile(file, onProgress){
     });
     img.src = objUrl;
     return loaded.then(function(){
-      const total = img.naturalHeight;
-      const step = 1600;
-      const overlap = 80;
-      const parts = [];
-      let y = 0;
-      function stepOnce(){
-        if (y >= total){
-          URL.revokeObjectURL(objUrl);
-          return Promise.resolve(parts.join(String.fromCharCode(10)));
-        }
-        const sh = Math.min(step + overlap, total - y);
-        const cv = ocrSlice(img, y, sh);
-        return T.recognize(cv, 'chi_sim', {
-          logger: function(m){
-            if (m.status === 'recognizing text' && onProgress){
-              onProgress(Math.round(m.progress * 100), Math.min(total, y + sh), total);
-            }
+      return T.createWorker('chi_sim', 1, {
+        logger: function(m){
+          if (m.status === 'recognizing text' && onProgress){
+            onProgress(Math.round((m.progress || 0) * 100));
           }
-        }).then(function(r){
-          const t = String((r.data && r.data.text) || '').trim();
-          if (t) parts.push(t);
-          y += step;
-          return stepOnce();
+        }
+      }).then(function(worker){
+        const total = img.naturalHeight;
+        const step = 1600;
+        const overlap = 80;
+        const parts = [];
+        let y = 0;
+        function stepOnce(){
+          if (y >= total){
+            URL.revokeObjectURL(objUrl);
+            return worker.terminate().then(function(){ return parts.join(String.fromCharCode(10)); });
+          }
+          const sh = Math.min(step + overlap, total - y);
+          const cv = ocrSlice(img, y, sh);
+          return worker.recognize(cv, {}, { blocks: true }).then(function(r){
+            // 逐行按置信度过滤：图片区、装饰字这些噪声行的分数普遍在 30 以下，
+            // 正文一般在 60 以上，用 55 分开。
+            const lines = [];
+            const blocks = (r.data && r.data.blocks) || [];
+            blocks.forEach(function(b){
+              (b.paragraphs || []).forEach(function(p){
+                (p.lines || []).forEach(function(L){ lines.push(L); });
+              });
+            });
+            let out = '';
+            if (lines.length){
+              const kept = lines.filter(function(L){
+                return (L.confidence || 0) >= 55 && String(L.text || '').trim().length > 1;
+              });
+              out = kept.map(function(L){ return squeezeCn(String(L.text).trim()); }).join(String.fromCharCode(10));
+              if (!kept.length) out = squeezeCn(String((r.data && r.data.text) || '').trim());
+            } else {
+              out = squeezeCn(String((r.data && r.data.text) || '').trim());
+            }
+            if (out) parts.push(out);
+            y += step;
+            return stepOnce();
+          });
+        }
+        return stepOnce().catch(function(e){
+          URL.revokeObjectURL(objUrl);
+          try { worker.terminate(); } catch (x) {}
+          throw e;
         });
-      }
-      return stepOnce();
+      });
+    }, function(e){
+      URL.revokeObjectURL(objUrl);
+      throw e;
     });
   });
 }
@@ -1532,7 +1582,7 @@ document.getElementById('ocrFile').onchange = function(){
       const body = document.getElementById('manBody');
       if (all){
         body.value = all;
-        out.textContent = '识别完成，共 ' + all.length + ' 字，已填进下面的正文框。有错字就手动改一下，再点提炼。';
+        out.textContent = '识别完成，共 ' + all.length + ' 字，已填进下面的正文框。公众号长图常是艺术字体，容易认错字，先扫一遍改掉再点提炼。';
         document.getElementById('ocrClear').style.display = 'inline-block';
         if (body.scrollIntoView) body.scrollIntoView({ behavior: 'smooth', block: 'center' });
       } else {
@@ -1544,8 +1594,8 @@ document.getElementById('ocrFile').onchange = function(){
     }
     const one = files[k];
     out.textContent = '正在识别第 ' + (k + 1) + '/' + files.length + ' 张…首次使用要下载中文语言包，大约 15MB，只下这一次。';
-    ocrRunFile(one, function(pct, done, total){
-      out.textContent = '第 ' + (k + 1) + '/' + files.length + ' 张识别中 ' + pct + '% · 进度 ' + done + '/' + total + ' 像素';
+    ocrRunFile(one, function(pct){
+      out.textContent = '第 ' + (k + 1) + '/' + files.length + ' 张识别中 ' + pct + '%';
     }).then(function(text){
       if (text) pieces.push(text);
       k++;
@@ -1609,23 +1659,38 @@ document.getElementById('manRun').onclick = function(){
   showManResult(r, b, title, today);
 };
 
-function showManResult(r, b, title, today){
+function starPickHtml(score){
+  let s = '';
+  const cur = Number(score) || 0;
+  for (let n = 1; n <= 5; n++){
+    s += '<span data-star="' + n + '" style="cursor:pointer;font-size:26px;line-height:1;color:'
+      + (n <= cur ? '#e8a020' : '#c9ced8') + '">★</span>';
+  }
+  return s;
+}
+
+function renderManCard(item, b, title, today){
   const box = document.getElementById('manResult');
-  const item = Object.assign({}, r, {
-    title: title,
-    site: '手动输入',
-    published_at: today,
-    url: 'local:' + Date.now(),
-    content: String(b).slice(0, 1600),
-    engine: 'extract',
-  });
-  lastPick = item;
   box.innerHTML = card(item, 'del')
+    + '<div style="margin-top:12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
+    + '<span style="font-size:13px;color:#5b6472">这条几星，自己点：</span>'
+    + starPickHtml(item.score)
+    + '</div>'
     + '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">'
     + '<button class="btn" id="manSave" style="margin:0">存入留档</button>'
     + '<button class="btn" id="manDrop" style="margin:0">删除这条</button>'
     + '</div>';
   document.getElementById('manCopy').style.display = 'inline-block';
+
+  Array.prototype.forEach.call(box.querySelectorAll('[data-star]'), function(el){
+    el.onclick = function(){
+      item.score = parseInt(el.getAttribute('data-star'), 10);
+      lastPick = item;
+      renderManCard(item, b, title, today);
+      toast('星级改成 ' + item.score + ' 星', 'ok');
+    };
+  });
+
   document.getElementById('manSave').onclick = function(){
     const cur = ld(KEY_MAN) || [];
     if (!cur.some(function(n){ return keyOf(n) === keyOf(item); })) cur.unshift(item);
@@ -1643,7 +1708,20 @@ function showManResult(r, b, title, today){
     toast('已删除', 'ok');
     renderScreen(); renderArchive(); counts();
   };
-  toast('提炼完成：' + item.category + ' · ' + stars(item.score), 'ok');
+}
+
+function showManResult(r, b, title, today){
+  const item = Object.assign({}, r, {
+    title: title,
+    site: '手动输入',
+    published_at: today,
+    url: 'local:' + Date.now(),
+    content: String(b).slice(0, 1600),
+    engine: 'extract',
+  });
+  lastPick = item;
+  renderManCard(item, b, title, today);
+  toast('提炼完成：' + item.category + '，星级可以自己点', 'ok');
 }
 
 document.getElementById('manCopy').onclick = function(){
