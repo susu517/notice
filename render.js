@@ -1258,6 +1258,7 @@ document.getElementById('manRun').onclick = function(){
       if (!forced){ toast('内容太少，提不出东西，再多贴一点', 'err'); return; }
       showManResult(forced, b, title, today);
     };
+    aiTryAnyway(title, b, today, box);
     return;
   }
 
@@ -1428,19 +1429,57 @@ async function aiQueueThenWait(item, b, today){
   aiPoll(qid, item, b, item.title, today, 20);
 }
 
-function showManResult(r, b, title, today){
+// 规则判了「不用管」时，也别直接放弃：照样排给 AI 再看一遍，AI 觉得该留就把卡片出出来
+async function aiTryAnyway(title, b, today, box){
+  if (!SB) return;
+  const qid = 'man' + Date.now() + 'y' + (++aiSeq);
+  const okk = await sbPush('aiq', qid, {
+    status: 'pending',
+    title: title,
+    body: String(b).slice(0, 6000),
+    asked_at: new Date().toISOString(),
+  });
+  if (!okk) return;
+  box.insertAdjacentHTML('beforeend',
+    '<div class="hint" id="manAiHint" style="margin-top:8px">规则判了不留，但已经把这段排给 AI 再看一遍（后台定时处理，通常几分钟）。AI 觉得该留，卡片会直接出现在这里。</div>');
+  for (let i = 0; i < 20; i++){
+    await nap(6000);
+    try {
+      const res = await fetch(sbBase() + '/rest/v1/nc_items?kind=eq.aiq&key=eq.' + encodeURIComponent(qid), { headers: sbHead() });
+      if (!res.ok) continue;
+      const rows = await res.json();
+      const p = rows && rows[0] && rows[0].payload;
+      if (!p) continue;
+      if (p.status !== 'done' || !p.result) continue;
+      const rr = p.result;
+      showManResult({
+        title: rr.title || title,
+        category: rr.category || '其他重要',
+        score: rr.score || 3,
+        event_time: rr.event_time || '',
+        key_points: rr.key_points || [],
+        reason: rr.reason || '',
+      }, b, rr.title || title, today, true);
+      return;
+    } catch(e){}
+  }
+  const h = document.getElementById('manAiHint');
+  if (h) h.textContent = 'AI 还没回（后台排队中）。过几分钟重新点一次「提炼」，或者等它自己回来。';
+}
+
+function showManResult(r, b, title, today, skipAi){
   const item = Object.assign({}, r, {
     title: title,
     site: '手动输入',
     published_at: today,
     url: 'local:' + Date.now(),
     content: String(b).slice(0, 1600),
-    engine: 'extract',
+    engine: skipAi ? 'ai' : 'extract',
   });
   lastPick = item;
   renderManCard(item, b, title, today);
   toast('提炼完成：' + item.category + '，星级可以自己点', 'ok');
-  aiQueueThenWait(item, b, today);
+  if (!skipAi) aiQueueThenWait(item, b, today);
 }
 
 document.getElementById('manCopy').onclick = function(){
