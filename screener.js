@@ -262,7 +262,11 @@ function isExpired(rawText, now) {
   const latest = latestDate(rawText, now);
   if (!latest) return false;
   const today = now || new Date();
-  return (today - latest) / 86400000 > 20;
+  const days = (today - latest) / 86400000;
+  // 早于 3 年的日期一律当解析错误处理：OCR 常把 2026 认成 2006，正文里也常出现标题年份，
+  // 不能因为一个错字就把整条通知判死。
+  if (days > 1095) return false;
+  return days > 20;
 }
 
 /* ==================== 要点抽取 ==================== */
@@ -452,24 +456,28 @@ function pickSummary(title, body) {
  * 判断一条通知，保留则返回结构化结果，不保留返回 null
  * @param {{title:string, url:string, content:string, published_at?:string}} notice
  */
-function screenOne(notice) {
+function screenOne(notice, opts) {
+  // opts.force = true 时跳过所有「丢弃」判断，让用户自己决定留不留（规则判死之后的兜底入口）
+  const force = !!(opts && opts.force);
   const title = String(notice.title || '').trim();
   // 只压空格，保留换行——通知正文常是「字段：值」逐行结构，换行是切要点的重要依据
   const body = String(notice.content || '').replace(/[^\S\n]+/g, ' ').trim();
   if (!title && !body) return null;
 
-  // 忽略类：标题命中最严格，正文只对明确的宣传稿表达式生效
-  for (const re of SKIP_TITLE) {
-    if (re.test(title)) return null;
-  }
-  if (SKIP_BODY.some((re) => re.test(body.slice(0, 300)))) return null;
+  if (!force) {
+    // 忽略类：标题命中最严格，正文只对明确的宣传稿表达式生效
+    for (const re of SKIP_TITLE) {
+      if (re.test(title)) return null;
+    }
+    if (SKIP_BODY.some((re) => re.test(body.slice(0, 300)))) return null;
 
-  // 教职工事务
-  for (const re of STAFF_RULES) {
-    if (re.test(title) || re.test(body.slice(0, 30))) return null;
+    // 教职工事务
+    for (const re of STAFF_RULES) {
+      if (re.test(title) || re.test(body.slice(0, 30))) return null;
+    }
+    // 已过期
+    if (isExpired(body, new Date())) return null;
   }
-  // 已过期
-  if (isExpired(body, new Date())) return null;
 
   const category = pickCategory(title, body);
   const eventTime = formatTimes(body);
@@ -477,8 +485,8 @@ function screenOne(notice) {
   const score = pickScore(title, body, eventTime);
   const summary = pickSummary(title, body);
 
-  // 什么都不像学生要办的事，丢掉
-  if (!keyPoints.length && score <= 2) return null;
+  // 什么都不像学生要办的事，丢掉（用户明确要求保留时除外）
+  if (!force && !keyPoints.length && score <= 2) return null;
 
   return {
     title,
