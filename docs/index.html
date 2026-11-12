@@ -121,7 +121,7 @@ footer{text-align:center;color:#9aa4b5;font-size:12px;margin-top:30px}
 <div class="wrap">
   <header>
     <h1>学院信息筛选助手</h1>
-    <div class="meta">浙江工商大学 食品与生物工程学院 · 最后更新 2026/11/12 12:24:45</div>
+    <div class="meta">浙江工商大学 食品与生物工程学院 · 最后更新 2026/11/12 12:29:41</div>
   </header>
 
   <nav class="tabs" id="tabs">
@@ -260,10 +260,20 @@ footer{text-align:center;color:#9aa4b5;font-size:12px;margin-top:30px}
       <p>收件邮箱和发件邮箱在 GitHub 仓库的 Settings → Secrets 里配置（SMTP_USER / SMTP_PASS / MAIL_TO）。</p>
     </div>
     <div class="box">
-      <h3>导出备份</h3>
-      <p>把留档库里所有数据存成一个 JSON 文件。换手机、清浏览器、或者手滑清空之后，靠这个文件能把标题、分类、时间、要点、原文链接都找回来。</p>
-      <button class="btn" onclick="exportBackup()">导出留档备份</button>
-      <div class="hint">浏览器会把它存到手机的「下载」目录。</div>
+      <h3>云端同步</h3>
+      <p>填一次 Supabase 的地址和 anon key。连上以后，收藏和自加的常用网址会存到云端，清缓存、换手机、换电脑都自动回来。</p>
+      <input type="text" id="sbUrl" placeholder="https://xxxx.supabase.co" style="width:100%;margin-bottom:8px">
+      <input type="text" id="sbKey" placeholder="anon public key（eyJ 开头那一长串）" style="width:100%;margin-bottom:8px">
+      <button class="btn" id="sbSave" style="margin:0">连接云端</button>
+      <div class="hint" id="sbState"></div>
+    </div>
+    <div class="box">
+      <h3>备份与恢复</h3>
+      <p>把留档、本机存的收藏、自己加的常用网址一起存成一个 JSON 文件。换手机、清浏览器数据、手滑清空之后，导入这个文件就能全部找回来。</p>
+      <button class="btn" onclick="exportBackup()">导出备份</button>
+      <button class="btn ghost" id="importBtn" style="margin-left:8px">导入备份</button>
+      <input type="file" id="importFile" accept=".json,application/json" style="display:none">
+      <div class="hint">导出后文件在手机的「下载」目录；恢复时点「导入备份」，选那个 JSON 文件即可。</div>
     </div>
     <div class="box">
       <h3>监视范围</h3>
@@ -790,7 +800,7 @@ window.SCREENER = {
 </script>
 <script>
 const DATA = [{"title":"食品与生物工程学院创新创业学分已获分值公示","url":"https://spxy.zjgsu.edu.cn/?news/7136.html","published_at":"2026-11-10","category":"选课学籍","score":3,"event_time":"公示 2025年11月10日 — 2025年11月16日","key_points":["学院根据学生提供的申报材料，对学生的创新创业学分申报材料进行审核，现将审核结果在学院网站公示一周","公示期自2025年11月10日至11月16日，公示期间，学生如对公示的创新创业学分数据有疑议","请向食品学院教务办公室（食品楼245室）反映，联系人：裘老师，联系电话28008910。","根据《浙江工商大学关于印发本科生创新创业学分管理办法的通知》（浙商大教[2024]73号)文件精神"],"summary":"附件一、食品学院2023级创新学分申请公示","site":"通知公告","found_at":"2026-11-10T10:55:59.065Z","content":"根据《浙江工商大学关于印发本科生创新创业学分管理办法的通知》（浙商大教[2024]73号)文件精神，学院根据学生提供的申报材料，对学生的创新创业学分申报材料进行审核，现将审核结果在学院网站公示一周，公示期自2025年11月10日至11月16日，公示期间，学生如对公示的创新创业学分数据有疑议，请向食品学院教务办公室（食品楼245室）反映，联系人：裘老师，联系电话28008910。\n附件一、食品学院2023级创新学分申请公示"},{"title":"关于食品质量与安全专业“协同育人”实务导师进班级活动的通知","url":"https://spxy.zjgsu.edu.cn/?news/7134.html","published_at":"2026-11-09","category":"讲座报告","score":5,"event_time":"11月11日（周三）上午8:05","key_points":["食品质量与安全专业于第九周举办一场实务导师进班级活动，具体安排如下：","讲座题目：特殊医学用途配方食品合法解读","实务导师：裘耀东","杭州纽曲星生物科技有限公司/董事长","时间：11月11日（周三）上午8:05","为了响应学校开展“协同育人”实务导师进班级的活动，推进我院实践教学改革，提高人才培养质量"],"summary":"为了响应学校开展“协同育人”实务导师进班级的活动，推进我院实践教学改革，提高人才培养质量，食品质量与安全专业于第九周举办一场实务导师进班级活动，具体安排如下： 讲座题目：特殊医学用途配方食品合法解读 ","site":"通知公告","found_at":"2026-11-10T10:55:59.065Z","content":"为了响应学校开展“协同育人”实务导师进班级的活动，推进我院实践教学改革，提高人才培养质量，食品质量与安全专业于第九周举办一场实务导师进班级活动，具体安排如下：\n讲座题目：特殊医学用途配方食品合法解读\n实务导师：裘耀东\n杭州纽曲星生物科技有限公司/董事长\n时间：11月11日（周三）上午8:05\n地点：B331\n欢迎全院师生前往聆听！"},{"title":"关于2026-2027学年第一学期计算机类基础课程期中考试的通知","url":"https://jww.zjgsu.edu.cn/2026/1109/c1331a234407/page.htm","published_at":"2026-11-09","category":"教务考试","score":5,"event_time":"2026年11月14日（第9周周六）","key_points":["计算机科学与技术学院本学期开设计算机基础课程…","期中考试时间为2026年11月14日（第9周周六）。","学生必须凭有效证件(身份证、学生证、饭卡),按以上所排时间和机房准时参加上机考试…","学生按照行政班参加考试，如行政班没有则跟教学班参加考试，比如你是规划2402（行政班）学生","但是你和汉语2401（教学班）一起上课，请按照规划2402班级的考试时间参加考试。","特殊情况不能参加考试的同学，需要办理缓考手续！","将缓考情况说明（没有模板，由学生自行写好，要有联系电话…","联系电话28008312，具体缓考时间和地点会直接短信通知。","如有问题，可联系开课学院教秘老师（杨老师，联系电话：28008312）。","本次考场分为教工路校区和下沙校区，上机考试具体安排请查看附件。"],"summary":"各学院、学生： 计算机科学与技术学院本学期开设计算机基础课程：《Python语言1》《数据库应用》《AI智能办公》《大学计算机基础》《C语言》《办公软件高级应用》,期中考试时间…","site":"学校教务","found_at":"2026-11-10T11:51:59.878Z","content":"各学院、学生：\n计算机科学与技术学院本学期开设计算机基础课程：《Python语言1》《数据库应用》《AI智能办公》《大学计算机基础》《C语言》《办公软件高级应用》,期中考试时间为2026年11月14日（第9周周六）。\n注意事项：\n1、本次考场分为教工路校区和下沙校区，上机考试具体安排请查看附件。\n2、学生必须凭有效证件(身份证、学生证、饭卡),按以上所排时间和机房准时参加上机考试，不可随意更改场次和教室。\n3、学生按照行政班参加考试，如行政班没有则跟教学班参加考试，比如你是规划2402（行政班）学生，但是你和汉语2401（教学班）一起上课，请按照规划2402班级的考试时间参加考试。\n4、特殊情况不能参加考试的同学，需要办理缓考手续！将缓考情况说明（没有模板，由学生自行写好，要有联系电话，所在学院教务办或者学办盖章）交到信息楼329杨老师处，联系电话28008312，具体缓考时间和地点会直接短信通知。\n5、如有问题，可联系开课学院教秘老师（杨老师，联系电话：28008312）。\n教务处计算机科学与技术学院实验室与资产管理\n2026年-秋-教工路-期中上机考试安排表.xls\n2026年-秋-下沙-期中上机考试安排表.xlsx"},{"title":"关于开展2026级本科新生始业教育正式考试的通知","url":"https://xsc.zjgsu.edu.cn/2026/1106/c1826a233642/page.htm","published_at":"2026-11-06","category":"教务考试","score":4,"event_time":"11月11日 — 11月25日；培训 11月26日","key_points":["考试时间：11月11日—11月25日，各学院新生的具体考试时间见附件1。","考试地点：由各学院自行安排。","考试类型：开卷考试，学生从手机/电脑端进入课群开始考试，可携带《2026学生手册》。","题库中随机抽取100题，题型包括单选题、多选题、判断题、不定项选择题，每题1分。","正式考试，每位学生在规定的考试时长内可多次提交，以最后一次提交的结果为准。","总评成绩达80分及以上者通过，未通过者学校将另行安排补考时间。","推送链接地址：https://mp.weixin.qq.com/s/2MPq1VTldVIMBk…","请辅导员于11月26日前将汇总后的请假学生名单盖章后送至学活306谢老师处备案…","联系人：谢老师，电话：28877263。","根据《关于开展2026级本科新生始业教育优课的通知》，2026级本科新生始业教育正式考试安排如下："],"summary":"各学院： 根据《关于开展2026级本科新生始业教育优课的通知》，2026级本科新生始业教育正式考试安排如下： 一、考试相关安排 1.考试时间：11月11日—11月25日，各学院…","site":"学校学工","found_at":"2026-11-10T11:52:00.571Z","content":"各学院：\n根据《关于开展2026级本科新生始业教育优课的通知》，2026级本科新生始业教育正式考试安排如下：\n一、考试相关安排\n1.考试时间：11月11日—11月25日，各学院新生的具体考试时间见附件1。\n2.考试地点：由各学院自行安排。\n二、考试相关说明\n1.考试时长：50分钟。\n2.考试类型：开卷考试，学生从手机/电脑端进入课群开始考试，可携带《2026学生手册》。题库中随机抽取100题，题型包括单选题、多选题、判断题、不定项选择题，每题1分。正式考试，每位学生在规定的考试时长内可多次提交，以最后一次提交的结果为准。总评成绩达80分及以上者通过，未通过者学校将另行安排补考时间。根据始业教育各板块分数占比计算，在其他几项均为满分情况下，在线考试成绩需达到74分及以上方可满足总评成绩要求。\n3.考试方式：通过易班APP始业教育课群或易班优课电脑端两种方式中的任一方式进入。具体详见学生处发布的2026级本科新生始业教育优课平台使用指南。推送链接地址：https://mp.weixin.qq.com/s/2MPq1VTldVIMBkYsbIXkBQ\n三、其他事项说明\n1.如有学生因特殊不可抗力原因需要请假，请辅导员于11月26日前将汇总后的请假学生名单盖章后送至学活306谢老师处备案，请假说明模板见附件2。\n2.考试有效成绩为学院所在考试时间段内的最新一次成绩，考试结束后请勿点击再次考试，否则考试成绩作废，后果需自行承担。\n3.系统使用及考试期间，如有因系统问题出现的考试异常，可首先尝试刷新重新进入或更换方式进入。若尝试无效，请将班级、姓名、出现问题及相关截图报告给学院辅导员，由学院汇总报送至邮箱zjgsuyiban@163.com，经后台核实后，学校将另行安排补考。联系人：谢老师，电话：28877263。\n学生工作部（学生处、人武部）\n学工部“易班·鸿云”思政教育创新发展\n附件1：2026级本科新生始业教育正式考试学院时间安排.xlsx\n附件2：本科新生始业教育考试请假说明模板.docx"},{"title":"关于食品质量与安全专业“协同育人”实务精英进课堂活动的通知1","url":"https://spxy.zjgsu.edu.cn/?news/7124.html","published_at":"2026-11-05","category":"讲座报告","score":4,"event_time":"11月6日（周五）上午9：50","key_points":["食品质量与安全专业结合《食品毒理学》课程要求于第八周举办“实务精英进课堂”活动，具体如下：","讲座题目：电解水技术在农产品趁鲜加工产业链的应用前景","实务精英：周康","水熊水科技(杭州)有限公司/总经理","时间：11月6日（周五）上午9：50","地点：食品楼303","为了响应学校开展“协同育人”的活动，推进我院实践教学改革，提高人才培养质量"],"summary":"为了响应学校开展“协同育人”的活动，推进我院实践教学改革，提高人才培养质量，食品质量与安全专业结合《食品毒理学》课程要求于第八周举办“实务精英进课堂”活动，具体如下： 讲座题目：电解水技术在农产品趁鲜","site":"通知公告","found_at":"2026-11-10T10:55:59.065Z","content":"为了响应学校开展“协同育人”的活动，推进我院实践教学改革，提高人才培养质量，食品质量与安全专业结合《食品毒理学》课程要求于第八周举办“实务精英进课堂”活动，具体如下：\n讲座题目：电解水技术在农产品趁鲜加工产业链的应用前景\n实务精英：周康\n水熊水科技(杭州)有限公司/总经理\n时间：11月6日（周五）上午9：50\n地点：食品楼303\n欢迎全院师生前往聆听！"},{"title":"关于做好2026—2027学年本科生实习实践工作的通知","url":"https://jww.zjgsu.edu.cn/2026/1103/c1331a233440/page.htm","published_at":"2026-11-03","category":"实习就业","score":4,"event_time":"截止 2027年9月30日","key_points":["加强2026—2027学年本科生实习实践工作的管理，现就有关事项通知如下。","系统设计进阶式实习实践体系，统筹安排实习实践的时间和流程，确保实习内容与专业人才培养…","分类明确实习目标、实习形式、组织方式、指导要求和考核标准，形成层次递进、衔接有序的实习实践教学体系。","有效设计实习教学体系设计，从低年级到高年级分阶段合理安排认识实习、专业实习、课程实践、毕业实习等形式","毕业实习指导教师由学院选派责任心强、业务熟悉、经验丰富的教师担任","认识实习、专业实习、课程实习等其他实习原则上由系主任、专业负责人…","各学院积极探索“远程在线任务+阶段性实地集中”“虚拟仿真入门+实体岗位深化”等灵活多样的实习模式。","全校毕业实习时间跨度自2026年11月起至2027年4月止。","由学院提交弹性实习组织方案，经教务处审核同意后即可实施，但需加强弹性实习学生的全过程指导与管理","及时解答或联系处理学生实习过程中遇到的问题，实习结束后在实习生的毕业实习手册上填写实习"],"summary":"各学院： 根据《教育部等六部门关于加强普通本科高校大学生实习工作的意见》（教高〔2026〕1号）《浙江工商大学本科生实习工作管理办法》（浙商大教〔2018〕416号）文件精神，…","site":"学校教务","found_at":"2026-11-10T11:51:59.878Z","content":"各学院：\n根据《教育部等六部门关于加强普通本科高校大学生实习工作的意见》（教高〔2026〕1号）《浙江工商大学本科生实习工作管理办法》（浙商大教〔2018〕416号）文件精神，切实提高学生实践创新能力，落实浙江省高校教育教学工作会议关于将认识实习、专业实习、毕业实习等各类实习统一纳入“浙江省本科高校大学生实习管理服务平台”管理的工作部署，加强2026—2027学年本科生实习实践工作的管理，现就有关事项通知如下。\n一、总体要求\n（一）实习范围。本学年实习实践涵盖认识实习、专业实习、毕业实习、课程实习等各类实习实践。各学院要结合学科专业特点和人才培养目标，打通高校小课堂和社会大课堂，贯通理论教学和实践教学，系统设计进阶式实习实践体系，统筹安排实习实践的时间和流程，确保实习内容与专业人才培养、产业发展需求有效衔接。\n（二）总体安排。各学院应按照认识实习、专业实习、课程实践、毕业实习、其他实习等类别，分类明确实习目标、实习形式、组织方式、指导要求和考核标准，形成层次递进、衔接有序的实习实践教学体系。各类实习均应落实过程指导和考核评价，构建学生实习实践闭环反馈机制。\n（三）统一平台管理原则。按照省教育厅“应接尽接”工作要求，本学年起将认识实习、专业实习、毕业实习、课程实践等各类实习实践统一纳入“校友邦大学生实习实践管理平台”（以下简称“校友邦平台”，http://www.xybsyw.com）进行信息化管理，实现全过程数据监测。\n二、组织管理与职责。\n（一）组织领导与职责。各学院应成立由分管教学院长任组长的实习工作领导小组，结合理论课程教学进度，充分考虑行业特点、学生学习情况，有效设计实习教学体系设计，从低年级到高年级分阶段合理安排认识实习、专业实习、课程实践、毕业实习等形式，统筹负责本学院各类实习实践教学的组织和实施。\n（二）指导教师要求。毕业实习指导教师由学院选派责任心强、业务熟悉、经验丰富的教师担任，鼓励与实习单位共同选派技术骨干或管理人员担任联合指导教师，全程参与学生指导；认识实习、专业实习、课程实习等其他实习原则上由系主任、专业负责人、课程负责人或任课教师等担任指导教师。\n（三）学生实习要求。严格遵守国家的政策法规及实习单位的安全、保密及劳动纪律等有关制度，按照《实习教学计划》和《实习教学大纲》的要求，认真做好实习准备工作并按时完成实习教学计划规定的实习项目。\n三、实习形式与分类要求\n（一）认识实习。各学院要结合专业认知教育需要，统筹安排认识实习，可依托校外实践基地，采取企业参观、行业调研、专家讲座等方式，帮助学生了解行业产业、岗位设置和职业要求，增强专业认知和职业认同。\n（二）专业实习和课程实习。各学院要结合专业教学进度，依托校外实践基地和校内实践平台，注重专业理论与实际应用相结合，强\n化学生专业实践能力培养。\n（三）毕业实习。\n1.实习形式。毕业实习可采用实践基地集中实习（以下简称“集中实习”）、学生自主联系实习（以下简称“分散实习”）两种方式，优先安排学生到已建立的校外实践基地实习。各学院积极探索“远程在线任务+阶段性实地集中”“虚拟仿真入门+实体岗位深化”等灵活多样的实习模式。毕业实习在严格管理的前提下，可允许学生自行选择单位、经学院批准后开展分散实习。\n2.时间安排。全校毕业实习时间跨度自2026年11月起至2027年4月止。各学院可结合人才培养需要及学生实际情况，合理调整毕业实习时间。允许实行弹性实习。由学院提交弹性实习组织方案，经教务处审核同意后即可实施，但需加强弹性实习学生的全过程指导与管理，实习质量和安全标准不得降低。\n3.过程指导与考核评价。实习指导教师需及时登录平台或关注校友邦教师端微信公众号，随时了解学生实习动态，批阅学生周（月）志，及时解答或联系处理学生实习过程中遇到的问题，实习结束后在实习生的毕业实习手册上填写实习"},{"title":"关于开展2026级本科新生始业教育优课的通知","url":"https://xsc.zjgsu.edu.cn/2026/1102/c1826a233399/page.htm","published_at":"2026-11-02","category":"教务考试","score":4,"event_time":"11月2日00:00；11月30日23:59","key_points":["学校依托易班“优课YOOC”平台开展2026级本科新生始业教育。","新生始业教育课程共分为四个模块，包括“看”——始业教育优课；“读”——学习资料库…","这些内容将为同学们适应大学生活提供全面导航！","2026级新生始业教育学习对象","在规定时间内完成“商大知多少”新生始业教育线上考试。","敲黑板：2026级新生始业教育总评成绩80分及以上者为通过，未通过者学校将另行安排补考时间。","考试类型：开卷考试，学生只可携带纸质学生手册及一个用于考试的电子设备（手机/电脑）。","正式考试，每位新生在规定的考试时长内可多次提交，以最后一次提交的分数为准。","联系人：谢老师，电话：28877263","为指导和帮助2026级浙小商更加深入全面地了解学校，尽快完成角色转换、夯实价值底色、明晰成长路径"],"summary":"为指导和帮助2026级浙小商更加深入全面地了解学校，尽快完成角色转换、夯实价值底色、明晰成长路径，学校依托易班“优课YOOC”平台开展2026级本科新生始业教育。","site":"学校学工","found_at":"2026-11-10T11:52:00.571Z","content":"为指导和帮助2026级浙小商更加深入全面地了解学校，尽快完成角色转换、夯实价值底色、明晰成长路径，学校依托易班“优课YOOC”平台开展2026级本科新生始业教育。新生始业教育课程共分为四个模块，包括“看”——始业教育优课；“读”——学习资料库；“谈”——我想对商大说；“测”——商大知多少。这些内容将为同学们适应大学生活提供全面导航！\n今天，就让易小商带你全面了解如何开启“浙江工商大学2026级本科新生始业教育”课程吧！\n一、2026级新生始业教育学习对象\n2026级本科新生（含专升本学生，第二学士除外）。\n二、2026级新生始业教育内容及成绩评定\n2026级新生始业教育内容及成绩评定由下面四个部分组成：\n1.“看”——始业教育优课（15%）\n【1】辅导员带浙小商学党史\n【2】浙小商校史校情教育\n【3】浙小商校训教育\n【4】浙小商校歌教育\n【5】校园认知\n【6】浙小商底线规则教育：校纪校规教育\n【7】浙小商生命安全教育\n【8】浙小商安全教育（一）：反诈安全教育\n【9】浙小商安全教育（二）：消防安全教育\n【10】浙小商安全教育（三）：交通安全教育\n【11】浙小商急救常识教育\n【12】浙小商创新创业教育\n【13】浙小商眼中的浙商大（一）——初见浙商大\n【14】浙小商眼中的浙商大（二）——解密浙商大\n根据视频课程的学习进度计算分值，获取分数。\n2.“读”——学习资料库（5%）\n在课群的学习资料库内下载2026版学生手册，自主阅读学习。课群学习资料区下载/预览大于或等于1次，成绩记为满分。否则按照比例获取分数。\n3.“谈”——我想对商大说（5%）\n积极参与“我想对商大说”话题讨论。在“我想对商大说”话题讨论区发帖/回帖大于或等于2条，成绩记为满分。否则按照比例获取分数。\n4.“测”——商大知多少（75%）\n在规定时间内完成“商大知多少”新生始业教育线上考试。新生始业教育考试内容涵盖与新生相关的学生管理制度、安全教育、身心健康、校情校史、思想引领、禁毒知识等内容，题库内共有464道题目。考试题目从题库中随机抽取。\n敲黑板：2026级新生始业教育总评成绩80分及以上者为通过，未通过者学校将另行安排补考时间。根据始业教育各板块分数占比，在其他几项均为满分情况下，在线考试成绩需达到74分及以上方可满足总评成绩要求。\n三、新生始业教育线上考试安排\n开放时间：11月2日00:00——11月30日23:59，具体考试时间由学工部统一组织安排，另行通知。\n考试地点：由各学院自行安排。\n考试总时长：50分钟，以点击“开始考试”开始计时。\n考试类型：开卷考试，学生只可携带纸质学生手册及一个用于考试的电子设备（手机/电脑）。题库中随机抽取100题，题型包括单选题、多选题、判断题、不定项选择题，每题各1分。\n正式考试，每位新生在规定的考试时长内可多次提交，以最后一次提交的分数为准。\n四、新生始业教育课群学习支持\n系统使用期间，如有针对试题理解的歧义等问题，请及时反馈。\n联系人：谢老师，电话：28877263\n浙江工商大学学生工作部（学生处、人武部）\n学工部“易班·鸿云”思政教育创新发展\n请2026级浙小商们认真学习，\n内化于心、外化于行，\n度过一个顺利有收获的大学之旅！\n（后附易班认证及始业教育课程进入方式）\n敲黑板啦|浙小商易班注册及始业教育课程学习指南\n2026级浙小商们，欢迎加入浙江工商大学的大家庭！请小萌新们先下载【易班APP】，以便完成后期的新生始业教育课程哦！\n请注意，易班平台一定要通过校方实名认证才可以正常使用各项功能。下面为大家带来最详细的易班注册认证攻略，助你顺利开启易班大门！\n一、什么是易班？\n易班网是为学生提供“互联网+教育教学、生活服务和文化娱乐”等全方位校园服务，主动承担国家意识形态战略、服务学生成长成才的学生网络思政工作示范平台。截至2025年3月"},{"title":"专业选修课补选通知（2026-2027学年第二学期）","url":"https://jww.zjgsu.edu.cn/2026/1030/c1331a233341/page.htm","published_at":"2026-10-30","category":"选课学籍","score":3,"event_time":"","key_points":[],"summary":"专业选修课补选通知（2026-2027学年第二学期）","site":"学校教务","found_at":"2026-11-10T11:52:41.272Z","content":""},{"title":"关于2027届本科毕业生电子摄像安排的通知","url":"https://jww.zjgsu.edu.cn/2026/1026/c1331a233192/page.htm","published_at":"2026-10-26","category":"毕业离校","score":3,"event_time":"2026年10月31日 — 2026年11月1日；报名 2026年10月26日","key_points":["请各位学生务必按附件表中时间参与核验。","请于外网链接进入：https://jwxt.zjgsu.edu.cn/jwglxt","（注意：必须使用电脑缴费，不可使用手机等移动端，浏览器必须使用新版谷歌，火狐，safari）","图像采集收费标准为每人20元，报名缴费时间拟定于2026年10月26日——10月30日支付宝缴费。","报名缴费流程如下：","学生角色登陆教务管理系统——报名申请——考级项目报名——毕业电子摄像——选择“学生电子摄像”（打…","拍摄要求：学生刷采集码进行拍摄，请务必提前按流程（附件2）保存。","拍摄流程：现场按班级报到→按学号排队→以班为单位进入拍摄现场→在拍摄序号上签名→拍摄→离开拍摄现场。","经与新华社浙江省分社联系，定于2026年10月31-11月1日（下沙校区）","为保证学信网上传的成功率，请务必按照下面标准进行准备。"],"summary":"各学院、各班级学生： 经与新华社浙江省分社联系，定于2026年10月31-11月1日（下沙校区），对2027届本科毕业生（含2023级本科留学生、2025级专升本学生）集中进行…","site":"学校教务","found_at":"2026-11-10T11:51:59.878Z","content":"各学院、各班级学生：\n经与新华社浙江省分社联系，定于2026年10月31-11月1日（下沙校区），对2027届本科毕业生（含2023级本科留学生、2025级专升本学生）集中进行电子注册图像采集。请各位学生务必按附件表中时间参与核验。如确因故无法于本周末参与核验，可关注后续补拍通知。但需注意补拍席位有限，勿集中前往。现将有关事项通知如下：\n一、根据教育部规定，图像采集是毕业资格审查的重要环节，且毕业证书、学位证书的照片均需采用新华社统一采集的图像，网上电子注册也需采用采集的电子图像，故原则上不得请假，若有参加各类培训、考试等特殊情况，需事先向学院备案。\n二、报名缴费：\n请于外网链接进入：https://jwxt.zjgsu.edu.cn/jwglxt\n（注意：必须使用电脑缴费，不可使用手机等移动端，浏览器必须使用新版谷歌，火狐，safari）\n图像采集收费标准为每人20元，报名缴费时间拟定于2026年10月26日——10月30日支付宝缴费。报名缴费流程如下：\n学生角色登陆教务管理系统——报名申请——考级项目报名——毕业电子摄像——选择“学生电子摄像”（打钩）——点击右上角“缴费”，跳转到缴费界面——在缴费界面选择“学生电子摄像”（打钩）——点击“缴费”——通过支付宝缴费——支付宝缴费完成后，请等页面自动跳转到系统中的缴费界面，点击“已缴费栏”查看缴费情况（注意：支付宝缴费完成后，不要手动关闭缴费页面，务必要等页面自动跳转，否则无法更新缴费状态）。\n注意：参加校内集中拍摄人员通过支付宝缴费，请大家在规定时间内完成缴费，以免影响网上电子注册及毕业证书和学位证书制作。学校根据缴费数据制作现场拍摄名单，无法拍摄的同学请勿缴费。因故无法按时拍摄需补拍的学生关注补拍通知中的缴费时间，请勿在本次缴费。散拍的学生请在新华社浙江分社图像采集中心缴费，请勿在系统中缴费。\n三、拍摄安排：\n1．请毕业班学生按（附件1）时间提前10分钟到达指定地点，由班长组织班内学生，按学号顺序排队等候拍摄，不允许随意漏人。拍摄顺序严格以学号顺序为准，否则可能会导致图像与本人信息不匹配。\n2．拍摄要求：学生刷采集码进行拍摄，请务必提前按流程（附件2）保存。\n为保证学信网上传的成功率，请务必按照下面标准进行准备。\n①物姿态与表情：坐姿端正，表情自然，双眼自然睁开并平视，耳朵对称，左右肩膀平衡。\n②眼镜：常戴眼镜者应佩戴眼镜，但不得戴有色(含隐形、美瞳)眼镜，镜框不得遮挡眼晴，眼镜不能有反光。\n③佩饰及遮挡物：不得使用头部覆盖物(宗教、医疗和文化需要时，不得遮挡脸部或造成阴影)。不得佩戴耳环项链等饰品。\n④头发不要有碎发，不能遮挡眉毛、眼睛和耳朵。不宜化妆。脸部注意不要过油，不要高光高亮，嘴唇自然闭合。\n⑤衣着：穿衬衫（最好白色有领衬衫），如果没有，穿浅色有领衣服（颜色单一不要花哨），应与背景色区分明显。不要穿蓝色、紫色、黄色、绿色、粉色的衣服，避免复杂图案、条纹。可参考附件3。\n3．拍摄流程：现场按班级报到→按学号排队→以班为单位进入拍摄现场→在拍摄序号上签名→拍摄→离开拍摄现场。\n其他事宜可咨询学院教学秘书或教务处李老师，联系电话19357514074，0571-28008460。\n附件1：浙江工商大学2027届普通本科毕业生电子摄像时间安排表(3).xlsx\n附件2：采集码保存的流程.docx\n附件3：证件照拍摄要求.doc"},{"title":"关于推荐2025年度（2025—2026学年） 浙江省“康恩贝自强奖学金”的通知","url":"https://xsc.zjgsu.edu.cn/2026/1026/c1826a233194/page.htm","published_at":"2026-10-26","category":"评奖资助","score":4,"event_time":"2026年11月9日16:00","key_points":["现就做好2025 年度（2025—2026 学年）浙江省“康恩贝自强奖学金” 推荐申报有关事宜通…","我校全日制在校残疾本科生、硕士研究生、博士研究生（须持有有效残疾人证）…","申请人对照2026 年新修订《浙江省 “康恩贝自强奖学金” 评选管理办法》（附件 3）自主提交申请。","各学院严格对照评选管理办法，结合申请人实际情况开展初审…","学校完成审核、综合评定后，确定推荐名单与获奖等次，统一报送省“康恩贝自强奖学金” 评审办公室审定。","请各学院完成审核汇总后，于2026年11月9日16:00 前将纸质材料报送至学生活动中心311办公室","将全套电子版材料打包（命名格式：XX 学院 + 康恩贝自强奖学金）发送至邮箱…","申报材料按“一人一档” 整理，单个文件夹以 “XX 姓名” 命名，具体材料清单如下：","证书须按照申请表内奖项填报顺序依次排列；奖项已评审通过、证书暂未下发的，可由学院出具获奖证明替代。","根据浙江省残疾人福利基金会、浙江省学生资助管理中心《关于印发浙江省“康恩贝自强奖学金” 管理办法…"],"summary":"各学院、班级： 根据浙江省残疾人福利基金会、浙江省学生资助管理中心《关于印发浙江省“康恩贝自强奖学金” 管理办法的函》（浙残基函〔2026〕2 号），现就做好2025 年度（2…","site":"学校学工","found_at":"2026-11-10T11:52:00.571Z","content":"各学院、班级：\n根据浙江省残疾人福利基金会、浙江省学生资助管理中心《关于印发浙江省“康恩贝自强奖学金” 管理办法的函》（浙残基函〔2026〕2 号），现就做好2025 年度（2025—2026 学年）浙江省“康恩贝自强奖学金” 推荐申报有关事宜通知如下：\n一、申请对象\n我校全日制在校残疾本科生、硕士研究生、博士研究生（须持有有效残疾人证），2026 级新生不参与本次申报。\n二、申请程序\n（一）个人申请。申请人对照2026 年新修订《浙江省 “康恩贝自强奖学金” 评选管理办法》（附件 3）自主提交申请。\n（二）学院初审。各学院严格对照评选管理办法，结合申请人实际情况开展初审，初审通过后将符合条件学生的全套申报材料报送至学工部学生管理科。\n（三）学校报送。学校完成审核、综合评定后，确定推荐名单与获奖等次，统一报送省“康恩贝自强奖学金” 评审办公室审定。\n三、报送要求\n请各学院完成审核汇总后，于2026年11月9日16:00 前将纸质材料报送至学生活动中心311办公室；同时以学院为单位，将全套电子版材料打包（命名格式：XX 学院 + 康恩贝自强奖学金）发送至邮箱：zjgsuxsgl@163.com。\n申报材料按“一人一档” 整理，单个文件夹以 “XX 姓名” 命名，具体材料清单如下：\n1.浙江省“康恩贝自强奖学金”申报表（纸质版1份 + 电子版），文件命名：XX姓名+康恩贝自强奖学金申请表；\n2.浙江省“康恩贝自强奖学金”汇总表（纸质版1份 + 电子版），文件命名：XX学院+汇总表（每学院仅报送1 份）；\n3.佐证材料复印件：\n① 本人有效期内身份证正反面、残疾人证；\n② 银行卡正反面；\n③ 申报周期（2025—2026 学年）内获奖证书、成果证明等材料。证书须按照申请表内奖项填报顺序依次排列；奖项已评审通过、证书暂未下发的，可由学院出具获奖证明替代。\n学生工作部\n附件1：浙江省“康恩贝自强奖学金”申报表docx.docx\n附件2：浙江省康恩贝自强奖学金汇总表 .docx\n附件3：关于印发浙江省“康恩贝自强奖学金”管理办法的函.pdf"},{"title":"关于开展2026年“好班风好学风建设月”系列活动的通知","url":"https://xsc.zjgsu.edu.cn/2026/1026/c1826a233173/page.htm","published_at":"2026-10-26","category":"实习就业","score":5,"event_time":"11月17日","key_points":["实施新时代立德树人工程，培养德智体美劳全面发展的社会主义建设者和接班人，持续以学生成长为中心","推进我校班风学风建设，以学促思、以学促进、以学促研，营造积极的班级学习和成长氛围以及良好的育人环境","学校将开展2026年“好班风好学风建设月”系列活动，具体事项通知如下。","学风固本厚植成才沃土协同务实涵育时代新人","“好班风好学风建设月”系列活动","“竞”彩纷呈，招兵买马——学科竞赛组队双选与导师咨询会","各学院在校内指定区域依托本院优势竞赛项目分别进行集中展示，结合赛项特点设置项目招募与人才自荐双向通道","围绕赛制解读、跨学科组队策略、备赛经验分享等方式","面向对象：全体本科生","为全面贯彻落实习近平总书记关于教育的重要论述和全国教育大会部署要求，落实立德树人根本任务"],"summary":"各学院： 为全面贯彻落实习近平总书记关于教育的重要论述和全国教育大会部署要求，落实立德树人根本任务，实施新时代立德树人工程，培养德智体美劳全面发展的社会主义建设者和接班人，持续…","site":"学校学工","found_at":"2026-11-10T11:52:00.571Z","content":"各学院：\n为全面贯彻落实习近平总书记关于教育的重要论述和全国教育大会部署要求，落实立德树人根本任务，实施新时代立德树人工程，培养德智体美劳全面发展的社会主义建设者和接班人，持续以学生成长为中心，推进我校班风学风建设，以学促思、以学促进、以学促研，营造积极的班级学习和成长氛围以及良好的育人环境，学校将开展2026年“好班风好学风建设月”系列活动，具体事项通知如下。\n一、活动主题\n学风固本厚植成才沃土协同务实涵育时代新人\n二、活动时间\n2026年10月—12月\n三、“好班风好学风建设月”系列活动\n（一）“竞”彩纷呈，招兵买马——学科竞赛组队双选与导师咨询会\n各学院在校内指定区域依托本院优势竞赛项目分别进行集中展示，结合赛项特点设置项目招募与人才自荐双向通道，围绕赛制解读、跨学科组队策略、备赛经验分享等方式，邀请指导教师、往届国奖团队负责人及优秀参赛学长学姐参与面对面咨询与对接交流。\n面向对象：全体本科生\n（二）“鸿云成长，共话未来”——“鸿云”成长岛新生体验计划\n开放“鸿云”成长岛新生班级预约专属通道，由新生辅导员和宣讲员担任参观讲解员，鼓励小团队参观，每次参观人数不多于12人，人数多的班级需分为多个团队。通过具身沉浸式教学互动场景，指导和帮助2026级本科生更好地适应大学学习和生活，进一步明确大学学习目标、端正学习态度、提升自我发展内在驱动力，科学规划大学学习与生活。\n面向对象：2026级本科生\n（三）“笔耕寻法，学思并重”——第五届最美学习笔记评比大赛\n营造积极向上、和谐互助的课堂氛围，结合学科专业，引导学生认真学习、自主学习、有效学习，将基础有序的知识点与逻辑鲜明的思维导图相结合，将生动有趣的自制插图与高效实用的学习方法相融合，进一步提高学习效率，树立优秀学习榜样，培养良好学习习惯。\n承办学院：统计学院 东语学院\n（四）“规划四年，班风铸魂”——班风学风建设方案擂台赛\n以2026级本科生班级为主要参加对象，以班级今后四年班风学风建设规划为主题，旨在从新生入学起就营造团结文明、积极向上的班风和严谨刻苦、勤思善问的学风，带领班级同学进一步优化制定德智体美劳全面发展的成长规划。\n承办学院：法学院 公管学院\n面向对象：2026级本科生\n（五）“光影青春，科技向善”——班级学风AIGC创意微电影大赛\n引领大学生思考如何更好地成长成才，促使大学生主动融入班级，共同建设班级，营造良好学风，形成和谐文明的校园新风尚。鼓励学生积极运用人工智能（AIGC）工具进行创作，各班级可围绕班风学风建设中的真实故事，利用AI进行剧本构思、视觉生成、智能剪辑等，深度挖掘身边的“真善美”感人故事和榜样事迹，引导大学生思考科技向善的力量，以创新形式深化社会主义核心价值观教育，做到唱响主旋律、弘扬正能量，进一步提升班级凝聚力与学生的科技创新素养，以实际行动报效伟大祖国。\n承办学院：信电学院、人工智能学院 泰隆金融学院\n（六）“知纪明规，守纪笃行”——校纪校规教育宣讲\n各学院在学风建设月期间自主组织开展至少1场面向学院新生的校纪校规教育宣讲，聚焦学生日常行为规范与校纪校规底线，通过真实案例剖析、违纪学生现身说法、学工教师专题解读等形式，系统展示违规违纪行为的代价与后果，挖掘警示教育资源、明晰纪律红线标尺，营造广大青年学生知敬畏、存戒惧、守底线的良好校园氛围，鼓励成为明德守法、严于律己、知错能改、向阳而生的新时代青年。\n面向对象：全体本科生\n（七）“学长开讲，朋辈领航”——优秀学子学风宣讲活动\n学院层面成立“学风宣讲团”，进一步推动优良学风的传承与建设，充分发挥优秀学生的榜样示范作用。各学院需遴选6—8名政治坚定、学业优异、事迹突出的高年级本科生或研究生，组建本院学风宣讲队伍，面向2026级、2025级学生开展系列宣讲活动。宣讲内容应围绕学业规划、学习方法、科研入门、学科竞赛、成长"}];
-const CFG = {"title":"学院信息筛选助手","college":"浙江工商大学 食品与生物工程学院","sites":[{"name":"通知公告","url":"https://spxy.zjgsu.edu.cn/?tzgg.html","enabled":true},{"name":"学生工作","url":"https://spxy.zjgsu.edu.cn/?xgdt.html","enabled":true},{"name":"学生科技","url":"https://spxy.zjgsu.edu.cn/?xskj.html","enabled":true},{"name":"就业信息","url":"https://spxy.zjgsu.edu.cn/?jyxx.html","enabled":true},{"name":"研究生教学","url":"https://spxy.zjgsu.edu.cn/?yjsdt.html","enabled":true},{"name":"党群工作","url":"https://spxy.zjgsu.edu.cn/?dqdt.html","enabled":true},{"name":"实验管理","url":"https://spxy.zjgsu.edu.cn/?zxdt.html","enabled":false},{"name":"学校教务","url":"https://jww.zjgsu.edu.cn/1331/list.htm","enabled":true},{"name":"学校学工","url":"https://xsc.zjgsu.edu.cn/1826/list.htm","enabled":true}],"maxNew":6};
+const CFG = {"title":"学院信息筛选助手","college":"浙江工商大学 食品与生物工程学院","sites":[{"name":"通知公告","url":"https://spxy.zjgsu.edu.cn/?tzgg.html","enabled":true},{"name":"学生工作","url":"https://spxy.zjgsu.edu.cn/?xgdt.html","enabled":true},{"name":"学生科技","url":"https://spxy.zjgsu.edu.cn/?xskj.html","enabled":true},{"name":"就业信息","url":"https://spxy.zjgsu.edu.cn/?jyxx.html","enabled":true},{"name":"研究生教学","url":"https://spxy.zjgsu.edu.cn/?yjsdt.html","enabled":true},{"name":"党群工作","url":"https://spxy.zjgsu.edu.cn/?dqdt.html","enabled":true},{"name":"实验管理","url":"https://spxy.zjgsu.edu.cn/?zxdt.html","enabled":false},{"name":"学校教务","url":"https://jww.zjgsu.edu.cn/1331/list.htm","enabled":true},{"name":"学校学工","url":"https://xsc.zjgsu.edu.cn/1826/list.htm","enabled":true}],"maxNew":6,"supabase":{"url":"https://dahjqedaxctiaytytdio.supabase.co","key":"sb_publishable_dBzYKy6B_K_t3P0akIc5fA_aob4vTfp"}};
 const ALL = '全部';
 const KEY_DEL = 'nc_deleted';
 const KEY_DRAFT = 'nc_drafts';
@@ -839,7 +849,17 @@ function fetchtxt(n){
 function tokenGet(){ try{ return localStorage.getItem('nc_gh_token')||''; }catch(e){ return MEM['nc_gh_token']||''; } }
 function tokenSet(v){ MEM['nc_gh_token']=v; try{ localStorage.setItem('nc_gh_token', v); }catch(e){} }
 
-function alive(){ const d=ld(KEY_DEL), p=ld(KEY_PURGE); return DATA.filter(function(n){ return d.indexOf(keyOf(n))<0 && p.indexOf(keyOf(n))<0; }); }
+const KEY_MAN = 'nc_manual';
+// 本机存进去的条目 + 仓库同步下来的条目一起参与筛选；同一条不会重复出现
+function alive(){
+  const d = ld(KEY_DEL), p = ld(KEY_PURGE);
+  const base = DATA.filter(function(n){ return d.indexOf(keyOf(n))<0 && p.indexOf(keyOf(n))<0; });
+  const local = (ld(KEY_MAN) || []).filter(function(n){
+    const k = keyOf(n);
+    return d.indexOf(k) < 0 && !base.some(function(x){ return keyOf(x) === k; });
+  });
+  return local.concat(base);
+}
 function dead(){ const d=ld(KEY_DEL), p=ld(KEY_PURGE); return DATA.filter(function(n){ return d.indexOf(keyOf(n))>=0 && p.indexOf(keyOf(n))<0; }); }
 
 function card(n, action){
@@ -938,7 +958,13 @@ function exportBackup(){
     exported_at: new Date().toISOString(),
     total: alive().length,
     notices: alive(),
-    trash: (typeof dead === 'function' ? dead() : [])
+    trash: (typeof dead === 'function' ? dead() : []),
+    // 下面这些只存在本机，清缓存会丢，所以一起打进备份文件
+    manual: ld(KEY_MAN) || [],
+    sites: ld(KEY_SITES) || [],
+    deleted: ld(KEY_DEL) || [],
+    draft: ld(KEY_DRAFT) || [],
+    pushmail: ld('nc_pushmail') || ''
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
@@ -948,7 +974,29 @@ function exportBackup(){
   a.click();
   document.body.removeChild(a);
   setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1500);
-  toast('已导出 ' + data.total + ' 条');
+  toast('已导出：留档 ' + data.total + ' 条 · 本机收藏 ' + data.manual.length + ' 条 · 自加网址 ' + data.sites.length + ' 个');
+}
+
+function importBackup(file){
+  if (!file) return;
+  const fr = new FileReader();
+  fr.onload = function(){
+    let j = null;
+    try { j = JSON.parse(String(fr.result)); } catch(e){ toast('这个文件不是备份文件', 'err'); return; }
+    if (!j || typeof j !== 'object'){ toast('备份文件是空的', 'err'); return; }
+
+    let n = 0;
+    if (Array.isArray(j.manual)){ sv(KEY_MAN, j.manual); n = j.manual.length; }
+    if (Array.isArray(j.sites)){ sv(KEY_SITES, j.sites); }
+    if (Array.isArray(j.deleted)){ sv(KEY_DEL, j.deleted); }
+    if (Array.isArray(j.draft)){ sv(KEY_DRAFT, j.draft); }
+    if (j.pushmail) sv('nc_pushmail', j.pushmail);
+
+    try { renderSites(); renderScreen(); renderArchive(); renderDrafts(); counts(); } catch(e){}
+    toast('已恢复：本机收藏 ' + n + ' 条 · 自加网址 ' + ((j.sites || []).length) + ' 个');
+  };
+  fr.onerror = function(){ toast('文件读取失败', 'err'); };
+  fr.readAsText(file);
 }
 
 function renderArchive(){
@@ -986,12 +1034,135 @@ function renderDrafts(){
   });
 }
 
+// ---------- 云端同步（Supabase）----------
+// 没配置就是 null，一切照旧只存本机；配了就从云端拉、把本机独有的推上去
+const SB = (function(){
+  try {
+    if (CFG.supabase && CFG.supabase.url && CFG.supabase.key) return CFG.supabase;
+  } catch(e){}
+  const u = ld('nc_sb_url'), k = ld('nc_sb_key');
+  if (u && k) return { url: u, key: k };
+  return null;
+})();
+
+function sbBase(){
+  let s = String(SB.url);
+  while (s.length && s.charAt(s.length - 1) === '/') s = s.slice(0, -1);
+  const cut = s.indexOf('/rest/v1');
+  if (cut > 0) s = s.slice(0, cut);
+  return s;
+}
+function sbHead(){
+  return { 'apikey': SB.key, 'Authorization': 'Bearer ' + SB.key, 'Content-Type': 'application/json' };
+}
+
+async function sbPull(){
+  if (!SB) return null;
+  try {
+    const res = await fetch(sbBase() + '/rest/v1/nc_items?select=kind,key,payload&order=created_at.asc', { headers: sbHead() });
+    if (!res.ok) return null;
+    const rows = await res.json();
+    const notes = [], sites = [];
+    (rows || []).forEach(function(r){
+      if (r.kind === 'note') notes.push(r.payload);
+      else if (r.kind === 'site') sites.push(r.payload);
+    });
+    return { notes: notes, sites: sites };
+  } catch(e){ return null; }
+}
+
+async function sbPush(kind, key, payload){
+  if (!SB) return false;
+  try {
+    const res = await fetch(sbBase() + '/rest/v1/nc_items', {
+      method: 'POST',
+      headers: Object.assign(sbHead(), { 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
+      body: JSON.stringify([{ kind: kind, key: key, payload: payload }])
+    });
+    return res.ok;
+  } catch(e){ return false; }
+}
+
+async function sbDel(kind, key){
+  if (!SB) return false;
+  try {
+    const res = await fetch(sbBase() + '/rest/v1/nc_items?kind=eq.' + encodeURIComponent(kind) + '&key=eq.' + encodeURIComponent(key), { method: 'DELETE', headers: sbHead() });
+    return res.ok;
+  } catch(e){ return false; }
+}
+
+// 打开页面就对一次账：云端有的拉回来，本机独有的推上去（原有的数据也一并带上）
+async function syncCloud(){
+  if (!SB) return;
+  const cloud = await sbPull();
+  if (!cloud) return;
+
+  const cloudNotes = cloud.notes || [];
+  const cloudSites = cloud.sites || [];
+  const localNotes = ld(KEY_MAN) || [];
+  const localSites = ld(KEY_SITES) || [];
+
+  if (cloudNotes.length){
+    const merged = cloudNotes.slice();
+    localNotes.forEach(function(n){
+      if (!merged.some(function(x){ return keyOf(x) === keyOf(n); })) merged.push(n);
+    });
+    sv(KEY_MAN, merged.slice(0, 300));
+  }
+  if (cloudSites.length){
+    const merged2 = cloudSites.slice();
+    localSites.forEach(function(s){
+      if (!merged2.some(function(x){ return x.url === s.url; })) merged2.push(s);
+    });
+    sv(KEY_SITES, merged2);
+  }
+
+  for (const n of localNotes){
+    if (!cloudNotes.some(function(x){ return keyOf(x) === keyOf(n); })) await sbPush('note', keyOf(n), n);
+  }
+  for (const s of localSites){
+    if (!cloudSites.some(function(x){ return x.url === s.url; })) await sbPush('site', s.url, s);
+  }
+
+  try { renderSites(); renderScreen(); renderArchive(); counts(); } catch(e){}
+}
+
+const KEY_SITES = 'nc_sites';
+// 仓库里的栏目 + 本机自己加的栏目（同一网址只出现一次）
+function allSites(){
+  const base = (CFG.sites || []).slice();
+  const local = ld(KEY_SITES) || [];
+  return base.concat(local.filter(function(s){
+    return !base.some(function(b){ return b.url === s.url; });
+  }));
+}
+
 function renderSites(){
-  const list = CFG.sites || [];
+  const list = allSites();
+  const localUrls = (ld(KEY_SITES) || []).map(function(s){ return s.url; });
   const rows = list.map(function(s){
-    return '<tr><td>'+esc(s.name)+'</td><td style="word-break:break-all;color:#6b7280">'+esc(s.url)+'</td><td>'+(s.enabled===false?'已停用':'监控中')+'</td></tr>';
+    const isLocal = localUrls.indexOf(s.url) >= 0;
+    return '<tr><td>'+esc(s.name)+'</td>'
+      + '<td style="word-break:break-all;color:#6b7280">'+esc(s.url)+'</td>'
+      + '<td>'+(s.enabled===false?'已停用':'监控中')+'</td>'
+      + '<td>'+(isLocal
+        ? '<button class="del" style="padding:3px 10px;font-size:12px" data-delsite="'+esc(s.url)+'">删除</button>'
+        : '<span style="color:#9ca3af;font-size:12px">仓库自带</span>')
+      + '</td></tr>';
   }).join('');
-  document.getElementById('siteTable').innerHTML = '<tr><th>栏目</th><th>地址</th><th>状态</th></tr>'+rows;
+  document.getElementById('siteTable').innerHTML = '<tr><th>栏目</th><th>地址</th><th>状态</th><th>操作</th></tr>'+rows;
+
+  document.querySelectorAll('#siteTable [data-delsite]').forEach(function(b){
+    b.onclick = function(){
+      const u = b.getAttribute('data-delsite');
+      const cur = (ld(KEY_SITES) || []).filter(function(x){ return x.url !== u; });
+      sv(KEY_SITES, cur);
+      sbDel('site', u);
+      renderSites();
+      toast('已删除这个收藏', 'ok');
+    };
+  });
+
   const on = list.filter(function(s){ return s.enabled!==false; }).length;
   document.getElementById('bSites').textContent = on;
   document.getElementById('bSites2').textContent = on;
@@ -1273,10 +1444,38 @@ document.getElementById('manRun').onclick = function(){
     return;
   }
 
-  const item = Object.assign({}, r, { title: title, site: '手动输入', published_at: today });
+  const item = Object.assign({}, r, {
+    title: title,
+    site: '手动输入',
+    published_at: today,
+    url: 'local:' + Date.now(),
+    content: String(b).slice(0, 1600),
+    engine: 'extract',
+  });
   lastPick = item;
-  box.innerHTML = card(item);
+  box.innerHTML = card(item, 'del')
+    + '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">'
+    + '<button class="btn" id="manSave" style="margin:0">存入留档</button>'
+    + '<button class="btn" id="manDrop" style="margin:0">删除这条</button>'
+    + '</div>';
   document.getElementById('manCopy').style.display = 'inline-block';
+  document.getElementById('manSave').onclick = function(){
+    const cur = ld(KEY_MAN) || [];
+    if (!cur.some(function(n){ return keyOf(n) === keyOf(item); })) cur.unshift(item);
+    sv(KEY_MAN, cur.slice(0, 300));
+    sbPush('note', keyOf(item), item);
+    toast(SB ? '已存入留档：云端和本机都存了' : '已存入留档（保存在这台设备的浏览器里）', 'ok');
+    renderScreen(); renderArchive(); counts();
+  };
+  document.getElementById('manDrop').onclick = function(){
+    const cur = (ld(KEY_MAN) || []).filter(function(n){ return keyOf(n) !== keyOf(item); });
+    sv(KEY_MAN, cur);
+    sbDel('note', keyOf(item));
+    box.innerHTML = '';
+    document.getElementById('manCopy').style.display = 'none';
+    toast('已删除', 'ok');
+    renderScreen(); renderArchive(); counts();
+  };
   toast('提炼完成：' + item.category + ' · ' + stars(item.score), 'ok');
 };
 
@@ -1298,11 +1497,22 @@ async function addSite(name, url){
 
   const setMsg = function(msg, color){ st.textContent = msg; st.style.color = color || '#9ca3af'; };
 
-  if (!token){ setMsg('先在「推送与设置」填 GitHub Token，才能把网址写进仓库', '#dc2626'); return; }
-  if (!repo || !repo.repo){ setMsg('这个页面不是从 GitHub Pages 打开的，加不了', '#dc2626'); return; }
   if (!name || !url){ setMsg('栏目名和网址都要填', '#dc2626'); return; }
   if (!/^https?:\/\//i.test(url)){ setMsg('网址要 http:// 或 https:// 开头', '#dc2626'); return; }
-  if ((CFG.sites || []).some(function(x){ return x.url === url; })){ setMsg('这个网址已经在清单里了', '#dc2626'); return; }
+  if (allSites().some(function(x){ return x.url === url; })){ setMsg('这个网址已经在清单里了', '#dc2626'); return; }
+
+  // 没有令牌（或页面不是从 GitHub Pages 打开）：存下来，立刻生效
+  if (!token || !repo || !repo.repo){
+    const obj = { name: name, url: url, enabled: true };
+    const cur = ld(KEY_SITES) || [];
+    cur.push(obj);
+    sv(KEY_SITES, cur.slice(0, 100));
+    sbPush('site', url, obj);
+    renderSites();
+    setMsg(SB ? '已添加，云端已经同步' : '已加到本机收藏，这台设备上立刻生效', '#047857');
+    toast('已添加：' + name, 'ok');
+    return;
+  }
 
   setMsg('正在写入仓库 config.json…', '#6b7280');
   try {
@@ -1338,6 +1548,32 @@ async function addSite(name, url){
   }
 }
 
+document.getElementById('importBtn').onclick = function(){
+  document.getElementById('importFile').click();
+};
+
+// 云端同步：设置页填地址与 key，填完立刻重连
+(function(){
+  const u = document.getElementById('sbUrl'), k = document.getElementById('sbKey'), st = document.getElementById('sbState');
+  if (!u || !k) return;
+  const su = ld('nc_sb_url'), sk = ld('nc_sb_key');
+  if (su) u.value = su;
+  if (sk) k.value = sk;
+  if (st) st.textContent = SB ? '已连接：收藏和常用网址会同步到云端' : '还没配置，目前只存在这台设备里';
+  document.getElementById('sbSave').onclick = function(){
+    const a = u.value.trim(), b = k.value.trim();
+    if (!a || !b){ toast('地址和 key 都要填', 'err'); return; }
+    if (!/^https?:\/\//i.test(a)){ toast('地址要以 https:// 开头', 'err'); return; }
+    sv('nc_sb_url', a); sv('nc_sb_key', b);
+    toast('已保存，正在连云端…', 'ok');
+    setTimeout(function(){ location.reload(); }, 900);
+  };
+})();
+document.getElementById('importFile').onchange = function(){
+  importBackup(this.files && this.files[0]);
+  this.value = '';
+};
+
 document.getElementById('siteAdd').onclick = function(){
   addSite(document.getElementById('siteName').value.trim(), document.getElementById('siteUrl').value.trim());
 };
@@ -1358,6 +1594,35 @@ async function waitExtract(sinceISO){
   return null;
 }
 
+// 识别结果只在本页显示一次，不自动入库；用户点「存入留档」才留下来
+function showExtractResult(raw){
+  const box = document.getElementById('urlResult');
+  const item = Object.assign({}, raw);
+  if (!item.url) item.url = 'local:' + Date.now();
+  box.innerHTML = card(item, 'del')
+    + '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
+    + '<button class="btn" id="extSave" style="margin:0">存入留档</button>'
+    + '<button class="btn" id="extDrop" style="margin:0">删除这条</button>'
+    + '<span class="hint" style="margin:0">不存的话，关掉页面就没了</span>'
+    + '</div>';
+  document.getElementById('extSave').onclick = function(){
+    const cur = ld(KEY_MAN) || [];
+    if (!cur.some(function(n){ return keyOf(n) === keyOf(item); })) cur.unshift(item);
+    sv(KEY_MAN, cur.slice(0, 300));
+    sbPush('note', keyOf(item), item);
+    toast(SB ? '已存入留档：云端和本机都存了' : '已存入留档（保存在这台设备的浏览器里）', 'ok');
+    renderScreen(); renderArchive(); counts();
+  };
+  document.getElementById('extDrop').onclick = function(){
+    const cur = (ld(KEY_MAN) || []).filter(function(n){ return keyOf(n) !== keyOf(item); });
+    sv(KEY_MAN, cur);
+    sbDel('note', keyOf(item));
+    box.innerHTML = '';
+    toast('已删除，这条不再显示', 'ok');
+    renderScreen(); renderArchive(); counts();
+  };
+}
+
 document.getElementById('urlRun').onclick = function(){
   const url = document.getElementById('urlInput').value.trim();
   const st = document.getElementById('urlStatus');
@@ -1365,19 +1630,50 @@ document.getElementById('urlRun').onclick = function(){
   const setMsg = function(msg, color){ st.textContent = msg; st.style.color = color || '#9ca3af'; };
 
   if (!url || !/^https?:\/\//i.test(url)){ setMsg('先贴一个 http:// 或 https:// 开头的链接', '#dc2626'); return; }
-  if (!ghRepo() || !ghRepo().repo){ setMsg('这个页面不是从 GitHub Pages 打开的，识别功能用不了', '#dc2626'); return; }
-  if (!tokenGet()){ setMsg('先在「推送与设置」填 GitHub Token', '#dc2626'); return; }
+  const repo = ghRepo();
+  if (!repo || !repo.repo){ setMsg('这个页面不是从 GitHub Pages 打开的，识别功能用不了', '#dc2626'); return; }
 
+  // 有令牌：直接触发（自动路径）
+  if (tokenGet()){
+    const since = new Date().toISOString();
+    box.innerHTML = '';
+    setMsg('已提交，GitHub 正在抓取…大约等 1 分钟', '#6b7280');
+    runWorkflow('extract.yml', { url: url }, async function(){
+      const j = await waitExtract(since);
+      if (!j){ setMsg('等了 2 分钟还没结果，去仓库 Actions 页面看看「识别网址」任务有没有报错', '#dc2626'); return; }
+      if (j.ok && j.item){
+        showExtractResult(j.item);
+        setMsg('识别成功：' + j.item.category + ' · 星' + j.item.score + '（只在本次显示，想留就点「存入留档」）', '#047857');
+      } else {
+        let html = '<div class="box"><h3>这条没有保留</h3><p>' + esc(j.error || '判定为不需要处理') + '</p>';
+        if (j.preview && j.preview.head){
+          html += '<div class="hint">抓到 ' + j.preview.chars + ' 字，开头是：<br>' + esc(j.preview.head) + '</div>';
+        }
+        html += '</div>';
+        box.innerHTML = html;
+        setMsg('抓到了内容，但按口径不保留', '#dc2626');
+      }
+    }, function(reason){ setMsg('触发失败：' + reason, '#dc2626'); });
+    return;
+  }
+
+  // 没有令牌：复制链接 + 去 GitHub 点一下（不需要令牌）
   const since = new Date().toISOString();
-  box.innerHTML = '';
-  setMsg('已提交，GitHub 正在抓取…大约等 1 分钟', '#6b7280');
+  if (navigator.clipboard) { navigator.clipboard.writeText(url).catch(function(){}); }
+  const actionsUrl = 'https://github.com/' + repo.owner + '/' + repo.repo + '/actions/workflows/extract.yml';
+  box.innerHTML = '<div class="box"><h3>还差一步：去 GitHub 点一下「运行」</h3>'
+    + '<p>链接已经帮你复制好了。点下面按钮打开 GitHub → 在页面右侧点 <b>Run workflow</b> → 把链接粘到 <b>url</b> 框里 → 再点绿色 <b>Run workflow</b>。</p>'
+    + '<p style="margin-top:8px">大约 1 分钟跑完，结果会显示在下面，<b>不会自动进留档</b>；要留就点「存入留档」。这个流程<b>不需要任何令牌</b>。</p>'
+    + '<div style="margin-top:12px"><a class="btn" style="margin:0;display:inline-block" href="' + actionsUrl + '" target="_blank" rel="noopener">打开 GitHub 运行识别 →</a></div>'
+    + '<div class="hint" style="margin-top:10px">公众号文章有时会被拦，如果提示抓到 0 字，把正文复制到下面「手动输入内容并提炼」也能用。</div></div>';
+  setMsg('链接已复制，正在等 GitHub 跑完…', '#6b7280');
 
-  runWorkflow('extract.yml', { url: url }, async function(){
+  (async function(){
     const j = await waitExtract(since);
-    if (!j){ setMsg('等了 2 分钟还没结果，去仓库 Actions 页面看看「识别网址」任务有没有报错', '#dc2626'); return; }
+    if (!j) { setMsg('没等到结果：确认 GitHub 上那个任务真的跑完了（绿色的勾）', '#dc2626'); return; }
     if (j.ok && j.item){
-      box.innerHTML = card(j.item);
-      setMsg('识别成功：' + j.item.category + ' · 星' + j.item.score, '#047857');
+      showExtractResult(j.item);
+      setMsg('识别成功：' + j.item.category + ' · 星' + j.item.score + '（只在本次显示，想留就点「存入留档」）', '#047857');
     } else {
       let html = '<div class="box"><h3>这条没有保留</h3><p>' + esc(j.error || '判定为不需要处理') + '</p>';
       if (j.preview && j.preview.head){
@@ -1387,7 +1683,7 @@ document.getElementById('urlRun').onclick = function(){
       box.innerHTML = html;
       setMsg('抓到了内容，但按口径不保留', '#dc2626');
     }
-  }, function(reason){ setMsg('触发失败：' + reason, '#dc2626'); });
+  })();
 };
 
 var MORE_PANES = [ 'sites', 'trash', 'settings' ];
@@ -1437,6 +1733,8 @@ renderArchive();
 renderTrash();
 renderDrafts();
 renderSites();
+// 有云端配置就和云端对一次账（没配置就是空操作）
+syncCloud();
 bindRows();
 counts();
 if (!STORAGE_OK){
