@@ -1109,8 +1109,8 @@ function ocrRunFile(file, onProgress){
           const sh = Math.min(step + overlap, total - y);
           const cv = ocrSlice(img, y, sh);
           return worker.recognize(cv, {}, { blocks: true }).then(function(r){
-            // 逐行按置信度过滤：图片区、装饰字这些噪声行的分数普遍在 30 以下，
-            // 正文一般在 60 以上，用 55 分开。
+            // 逐行按置信度过滤：图片区、装饰字这些噪声行普遍在 35 以下，
+            // 正文一般在 60 以上，卡 45 既挡得住噪声又不容易误删真内容。
             const lines = [];
             const blocks = (r.data && r.data.blocks) || [];
             blocks.forEach(function(b){
@@ -1121,7 +1121,7 @@ function ocrRunFile(file, onProgress){
             let out = '';
             if (lines.length){
               const kept = lines.filter(function(L){
-                return (L.confidence || 0) >= 55 && String(L.text || '').trim().length > 1;
+                return (L.confidence || 0) >= 45 && String(L.text || '').trim().length > 1;
               });
               out = kept.map(function(L){ return squeezeCn(String(L.text).trim()); }).join(String.fromCharCode(10));
               if (!kept.length) out = squeezeCn(String((r.data && r.data.text) || '').trim());
