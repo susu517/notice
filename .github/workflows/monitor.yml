@@ -21,6 +21,12 @@ jobs:
         with: { node-version: '20' }
       - run: npm install
       - run: node monitor.js
+      - name: 处理 AI 队列
+        continue-on-error: true
+        env:
+          SB_URL: https://dahjqedaxctiaytytdio.supabase.co
+          SB_KEY: sb_publishable_dBzYKy6B_K_t3P0akIc5fA_aob4vTfp
+        run: node ai-screen.js
       - name: 提交数据
         run: |
           git config --local user.email "action@github.com"
