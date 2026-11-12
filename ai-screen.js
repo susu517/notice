@@ -47,6 +47,8 @@ function clampPoints(list) {
   return (Array.isArray(list) ? list : [])
     .map((p) => String(p || '').trim())
     .filter((p) => p.length > 0)
+    // 模型偶尔会补「地点：无」「时间：不详」这类占位条目，这里直接扔掉
+    .filter((p) => !/^[^：:]{1,8}[：:]\s*(无|不详|暂无|未提及|null|无具体|待确认|待定|空)\s*$/.test(p))
     .slice(0, 50)
     .map((p) => (p.length > 50 ? p.slice(0, 48) + '…' : p));
 }

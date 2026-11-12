@@ -251,7 +251,7 @@ function page(notices, config) {
     </div>
     <div class="box">
       <h3>手动输入内容并提炼</h3>
-      <p>把通知文字整段贴进来，在本机按同一套规则现场提炼分类、星级、时间、要点。这一步不联网、不上传你的文字；后台定时抓取那条链路才会调 AI。</p>
+      <p>把通知文字整段贴进来。点提炼先在你这台设备上用规则立刻出一版（分类、星级、时间、要点），同时把内容排进云端 AI 队列；AI 处理完，卡片会自动换成 AI 版（能纠正错字、按意思归纳）。原文只在你点提炼后发给自己的云端，不上传到别的地方。</p>
       <input type="text" id="manTitle" placeholder="标题（可留空，会取正文第一行）" style="width:100%;margin-bottom:8px">
       <textarea id="manBody" placeholder="正文内容贴在这里…"></textarea>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px">
@@ -1316,8 +1316,9 @@ function renderManCard(item, b, title, today){
     + '<input id="manTimeEdit" value="' + esc(item.event_time || '') + '" placeholder="时间，如 11月20日截止" style="flex:1;min-width:150px;padding:8px;border:1px solid #d8dde5;border-radius:8px;font-size:14px">'
     + '</div>'
     + '<textarea id="manPointsEdit" rows="7" placeholder="要点，一条一行" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid #d8dde5;border-radius:8px;font-size:14px;line-height:1.7">' + esc((item.key_points || []).join(String.fromCharCode(10))) + '</textarea>'
-    + '<div style="margin-top:8px"><button class="btn ghost" id="manApply" style="margin:0">应用修改</button>'
-    + '<span style="font-size:12px;color:#9aa4b2;margin-left:8px">改完点这里，卡片会跟着变</span></div>'
+    + '<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btn ghost" id="manApply" style="margin:0">应用修改</button>'
+    + '<button class="btn ghost" id="manAi" style="margin:0">再查 AI 结果</button>'
+    + '<span style="font-size:12px;color:#9aa4b2">改完点应用；AI 版在后台排队，回来点「再查」</span></div>'
     + '</div>'
     + '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">'
     + '<button class="btn" id="manSave" style="margin:0">存入留档</button>'
@@ -1342,6 +1343,12 @@ function renderManCard(item, b, title, today){
     toast('已按你的改法更新卡片', 'ok');
   };
 
+  const aiBtn = document.getElementById('manAi');
+  if (aiBtn) aiBtn.onclick = function(){
+    if (!item._aiQid){ toast('这条还没排给 AI', 'err'); return; }
+    aiPoll(item._aiQid, item, b, title, today, 25);
+  };
+
   document.getElementById('manSave').onclick = function(){
     readManEdit(item);
     const cur = ld(KEY_MAN) || [];
@@ -1362,6 +1369,60 @@ function renderManCard(item, b, title, today){
   };
 }
 
+// ---------- AI 提炼：排队给后台 Actions，结果写回 Supabase，这里轮询取回 ----------
+function nap(ms){ return new Promise(function(res){ setTimeout(res, ms); }); }
+let aiSeq = 0;
+
+async function aiPoll(qid, item, b, title, today, times){
+  for (let i = 0; i < times; i++){
+    await nap(6000);
+    try {
+      const res = await fetch(sbBase() + '/rest/v1/nc_items?kind=eq.aiq&key=eq.' + encodeURIComponent(qid), { headers: sbHead() });
+      if (!res.ok) continue;
+      const rows = await res.json();
+      const p = rows && rows[0] && rows[0].payload;
+      if (!p) continue;
+      if (p.status === 'error'){
+        toast('AI 没成功：' + String(p.error || '').slice(0, 40), 'err');
+        return false;
+      }
+      if (p.status !== 'done' || !p.result) continue;
+      const r2 = p.result;
+      if (r2.title) item.title = r2.title;
+      if (r2.category) item.category = r2.category;
+      if (r2.score) item.score = r2.score;
+      item.event_time = r2.event_time || item.event_time;
+      if (r2.key_points && r2.key_points.length) item.key_points = r2.key_points;
+      item.engine = 'ai';
+      lastPick = item;
+      renderManCard(item, b, item.title, today);
+      toast('AI 提炼好了：' + item.category + ' / ' + item.score + ' 星', 'ok');
+      return true;
+    } catch(e){}
+  }
+  toast('AI 结果还没回来（后台每 5 分钟跑一次），过一会儿点卡片里的「再查 AI 结果」', 'err');
+  return false;
+}
+
+async function aiQueueThenWait(item, b, today){
+  if (!SB) return;
+  const qid = 'man' + Date.now() + 'x' + (++aiSeq);
+  const okk = await sbPush('aiq', qid, {
+    status: 'pending',
+    title: item.title,
+    body: String(b).slice(0, 6000),
+    asked_at: new Date().toISOString(),
+  });
+  if (!okk){
+    toast('没能把内容排给 AI（云端没连上），先用这份规则结果', 'err');
+    return;
+  }
+  item._aiQid = qid;
+  renderManCard(item, b, item.title, today);
+  toast('已排队给 AI，出来会自动替换这张卡', 'ok');
+  aiPoll(qid, item, b, item.title, today, 20);
+}
+
 function showManResult(r, b, title, today){
   const item = Object.assign({}, r, {
     title: title,
@@ -1374,6 +1435,7 @@ function showManResult(r, b, title, today){
   lastPick = item;
   renderManCard(item, b, title, today);
   toast('提炼完成：' + item.category + '，星级可以自己点', 'ok');
+  aiQueueThenWait(item, b, today);
 }
 
 document.getElementById('manCopy').onclick = function(){
