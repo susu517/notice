@@ -403,7 +403,9 @@ function pickKeyPoints(rawText, limit) {
       if (!out) return;
       if (isNoisePoint(out)) return;
       const cn = (out.match(/[\u4e00-\u9fa5]/g) || []).length;
-      if (out.length < 14 || cn < 8) return;
+      // 上限放宽到 50 条以后，短要点（「每人限交一份」这种）也要留住，
+      // 门槛从 14 字/8 汉字降到 8 字/5 汉字，噪声由 isNoisePoint 挡
+      if (out.length < 8 || cn < 5) return;
       const bg = /^(根据|依据|按照|为了|为[\u4e00-\u9fa5]{1,3}|响应|结合|旨在|进一步|认真|切实|本次|经|现将)/.test(out);
       chosen.push({ idx, tag: '', w: 0, text: out, bg });
       used.add(idx);
@@ -481,7 +483,7 @@ function screenOne(notice, opts) {
 
   const category = pickCategory(title, body);
   const eventTime = formatTimes(body);
-  const keyPoints = pickKeyPoints(body, 10);
+  const keyPoints = pickKeyPoints(body, 50);
   const score = pickScore(title, body, eventTime);
   const summary = pickSummary(title, body);
 
