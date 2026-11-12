@@ -1338,6 +1338,7 @@ function renderManCard(item, b, title, today){
 
   document.getElementById('manApply').onclick = function(){
     readManEdit(item);
+    item._edited = true;
     lastPick = item;
     renderManCard(item, b, title, today);
     toast('已按你的改法更新卡片', 'ok');
@@ -1387,6 +1388,10 @@ async function aiPoll(qid, item, b, title, today, times){
         return false;
       }
       if (p.status !== 'done' || !p.result) continue;
+      if (item._edited){
+        toast('AI 版回来了，但你手动改过这张卡，就不覆盖了；想用 AI 版请重新提炼一次', 'err');
+        return false;
+      }
       const r2 = p.result;
       if (r2.title) item.title = r2.title;
       if (r2.category) item.category = r2.category;
