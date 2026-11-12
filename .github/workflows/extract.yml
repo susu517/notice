@@ -1,0 +1,48 @@
+name: 识别网址
+
+concurrency:
+  group: notice-data
+  cancel-in-progress: false
+
+# 由网页「识别网址」按钮触发：抓取指定通知链接的正文并提炼，结果写回 docs/extract.json
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: '要识别的通知链接'
+        required: true
+        default: ''
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 取出仓库代码
+        uses: actions/checkout@v4
+
+      - name: 准备 Node 环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 安装依赖
+        run: npm install --no-audit --no-fund
+
+      - name: 抓取并提炼
+        run: node extract-url.js "${{ github.event.inputs.url }}"
+        env:
+          TZ: Asia/Shanghai
+
+      - name: 把结果提交回去
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add docs/extract.json
+          if git diff --cached --quiet; then
+            echo "结果没有变化，跳过提交"
+          else
+            git commit -m "识别网址：$(date '+%Y-%m-%d %H:%M')"
+            git push
+          fi
