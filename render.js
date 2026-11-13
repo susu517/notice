@@ -1522,6 +1522,61 @@ async function aiPoll(qid, item, b, title, today, times){
   return false;
 }
 
+async function manAiRefine(u){
+  // 留档里的手动卡：点「AI 提炼」重新排一次队，回来就更新这张卡
+  if (!u) return;
+  if (!SB){ toast('云端没配置，AI 用不了', 'err'); return; }
+  const a = ld(KEY_MAN) || [];
+  let idx = -1;
+  for (let i = 0; i < a.length; i++){ if (keyOf(a[i]) === u) { idx = i; break; } }
+  if (idx < 0){ toast('这张卡不在留档里', 'err'); return; }
+  const src = String(a[idx].content || '').trim();
+  if (!src){ toast('这张卡只有标题、没有正文，AI 提炼不了', 'err'); return; }
+  toast('已排给 AI，回来会自动更新这张卡', 'ok');
+  const qid = 'man' + Date.now() + 'r' + (++aiSeq);
+  const okk = await sbPush('aiq', qid, {
+    status: 'pending',
+    title: a[idx].title,
+    body: src.slice(0, 6000),
+    asked_at: new Date().toISOString(),
+  });
+  if (!okk){ toast('云端没连上，没排上 AI', 'err'); return; }
+  const a2 = ld(KEY_MAN) || [];
+  for (let i = 0; i < a2.length; i++){ if (keyOf(a2[i]) === u) { a2[i]._aiQid = qid; break; } }
+  sv(KEY_MAN, a2.slice(0, 300));
+  renderArchive(); counts();
+  for (let i = 0; i < 30; i++){
+    await nap(8000);
+    try {
+      const res = await fetch(sbBase() + '/rest/v1/nc_items?kind=eq.aiq&key=eq.' + encodeURIComponent(qid), { headers: sbHead() });
+      if (!res.ok) continue;
+      const rows = await res.json();
+      const p = rows && rows[0] && rows[0].payload;
+      if (!p) continue;
+      if (p.status === 'error'){ toast('AI 没成功：' + String(p.error || '').slice(0, 40), 'err'); return; }
+      if (p.status !== 'done' || !p.result) continue;
+      const r2 = p.result;
+      const a3 = ld(KEY_MAN) || [];
+      for (let q = 0; q < a3.length; q++){
+        if (keyOf(a3[q]) === u){
+          if (r2.title) a3[q].title = r2.title;
+          if (r2.category) a3[q].category = r2.category;
+          if (r2.score) a3[q].score = r2.score;
+          if (r2.event_time) a3[q].event_time = r2.event_time;
+          if (r2.key_points && r2.key_points.length) a3[q].key_points = r2.key_points;
+          a3[q].engine = 'ai';
+          delete a3[q]._aiQid;
+          sv(KEY_MAN, a3.slice(0, 300));
+          renderArchive(); counts();
+          toast('AI 版好了，这张卡已更新：' + a3[q].category + ' / ' + a3[q].score + ' 星', 'ok');
+          return;
+        }
+      }
+    } catch(e){}
+  }
+  toast('AI 还没回来，下次打开页面会自动补上', 'err');
+}
+
 async function syncPendingAi(){
   // 存留档时 AI 还没回来，这次打开页面补查一次；回来了就直接更新留档里那条
   if (!SB) return;
