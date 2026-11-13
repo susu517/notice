@@ -1182,56 +1182,69 @@ function ocrRunFile(file, onProgress){
     });
     img.src = objUrl;
     return loaded.then(function(){
-      return T.createWorker('chi_sim', 1, {
-        logger: function(m){
-          if (m.status === 'recognizing text' && onProgress){
-            onProgress(Math.round((m.progress || 0) * 100));
-          }
+      const total = img.naturalHeight;
+      const step = 1600;
+      const overlap = 40;
+      const list = [];
+      for (let y = 0; y < total; y += step) list.push({ y: y, sh: Math.min(step + overlap, total - y) });
+      const parts = new Array(list.length);
+      let done = 0;
+
+      function parse(r){
+        const lines = [];
+        const blocks = (r.data && r.data.blocks) || [];
+        blocks.forEach(function(b){
+          (b.paragraphs || []).forEach(function(p){
+            (p.lines || []).forEach(function(L){ lines.push(L); });
+          });
+        });
+        let out = '';
+        if (lines.length){
+          const kept = lines.filter(function(L){
+            return (L.confidence || 0) >= ocrLevel && String(L.text || '').trim().length > 1;
+          });
+          out = kept.map(function(L){ return squeezeCn(String(L.text).trim()); }).join(String.fromCharCode(10));
+          if (!kept.length && ocrLevel < 80) out = squeezeCn(String((r.data && r.data.text) || '').trim());
+        } else {
+          out = squeezeCn(String((r.data && r.data.text) || '').trim());
         }
-      }).then(function(worker){
-        const total = img.naturalHeight;
-        const step = 1600;
-        const overlap = 80;
-        const parts = [];
-        let y = 0;
-        function stepOnce(){
-          if (y >= total){
-            URL.revokeObjectURL(objUrl);
-            return worker.terminate().then(function(){ return parts.join(String.fromCharCode(10)); });
-          }
-          const sh = Math.min(step + overlap, total - y);
-          const cv = ocrSlice(img, y, sh);
-          return worker.recognize(cv, {}, { blocks: true }).then(function(r){
-            // 逐行按置信度过滤：图片区、装饰字这些噪声行普遍在 35 以下，
-            // 正文一般在 60 以上，卡 45 既挡得住噪声又不容易误删真内容。
-            const lines = [];
-            const blocks = (r.data && r.data.blocks) || [];
-            blocks.forEach(function(b){
-              (b.paragraphs || []).forEach(function(p){
-                (p.lines || []).forEach(function(L){ lines.push(L); });
-              });
-            });
-            let out = '';
-            if (lines.length){
-              const kept = lines.filter(function(L){
-                return (L.confidence || 0) >= ocrLevel && String(L.text || '').trim().length > 1;
-              });
-              out = kept.map(function(L){ return squeezeCn(String(L.text).trim()); }).join(String.fromCharCode(10));
-              // 严格档不兜底：宁可空着，也不把没把握的字塞给用户
-              if (!kept.length && ocrLevel < 80) out = squeezeCn(String((r.data && r.data.text) || '').trim());
-            } else {
-              out = squeezeCn(String((r.data && r.data.text) || '').trim());
-            }
-            if (out) parts.push(out);
-            y += step;
-            return stepOnce();
+        return out;
+      }
+
+      // 两个 worker 同时跑不同分片：长图原来一片接一片，现在两片并行，差不多快一倍
+      const NW = Math.min(2, Math.max(1, list.length));
+      const ws = [];
+      for (let i = 0; i < NW; i++){
+        ws.push(T.createWorker('chi_sim', 1, {
+          logger: function(m){}
+        }));
+      }
+      return Promise.all(ws).then(function(workers){
+        let cursor = 0;
+        function runLoop(w){
+          const i = cursor++;
+          if (i >= list.length) return Promise.resolve();
+          const cv = ocrSlice(img, list[i].y, list[i].sh);
+          return workers[w].recognize(cv, {}, { blocks: true }).then(function(r){
+            parts[i] = parse(r);
+            done++;
+            if (onProgress) onProgress(Math.round((done / list.length) * 100));
+            return runLoop(w);
           });
         }
-        return stepOnce().catch(function(e){
+        return Promise.all(workers.map(function(w, idx){ return runLoop(idx); })).then(function(){
+          return Promise.all(workers.map(function(w){ return w.terminate(); })).then(function(){
+            URL.revokeObjectURL(objUrl);
+            return parts.filter(function(x){ return x; }).join(String.fromCharCode(10));
+          });
+        }, function(e){
+          try { workers.forEach(function(w){ w.terminate(); }); } catch(x){}
           URL.revokeObjectURL(objUrl);
-          try { worker.terminate(); } catch (x) {}
           throw e;
         });
+      }, function(e){
+        URL.revokeObjectURL(objUrl);
+        throw e;
       });
     }, function(e){
       URL.revokeObjectURL(objUrl);
