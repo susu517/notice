@@ -1046,7 +1046,7 @@ function pushViaMail(n){
     if (/评审|评选|公示|结果|名单|奖励|证书|学分|加分/.test(t)) s += 2;
     if (/根据|精神|贯彻|为了|深入|进一步|积极|推动|加强|不断|切实|扎实|重视/.test(t)) s -= 4;
     if (/会议|召开|开展|组织|顺利|圆满|成功举办|工作总结|参观/.test(t)) s -= 3;
-    if (/\d/.test(t)) s += 1;
+    if (/[0-9]/.test(t)) s += 1;
     return s;
   }
   const pool = (n.key_points || []).map(function(p, i){ return { t: pushClip(p, 100), w: pw(p), i: i }; });
@@ -1085,7 +1085,9 @@ function handlePush(btn){
   // 手动输入的卡片 url 是 local:时间戳，不在 DATA 里，要单独从 lastPick 取
   let n = DATA.filter(function(x){ return x.url === u; })[0];
   if (!n && lastPick && lastPick.url === u) n = lastPick;
-  if (!n) n = { url: u, title: '通知', category: '', score: 0 };
+  // 刷新页面后 lastPick 丢了，手动存的卡片要从本机留档里取，否则只能推出一个空壳
+  if (!n) n = (ld(KEY_MAN) || []).filter(function(x){ return keyOf(x) === u; })[0];
+  if (!n){ toast('这张卡的内容没读到，刷新一下页面再点推送', 'err'); return; }
   pushViaMail(n);
 }
 
