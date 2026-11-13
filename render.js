@@ -105,6 +105,8 @@ details.full p{margin-top:8px;font-size:13px;color:#4b5563;line-height:1.75;whit
 .acts{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding-top:10px;border-top:1px solid #eff2f7}
 .fetched{font-size:11px;color:#9aa4b5;white-space:nowrap}
+.aiBtn{display:inline-flex;align-items:center;background:#fff;color:#122a52;border:1px solid #c8d3e6;font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:8px;cursor:pointer;font-family:inherit}
+.aiBtn:hover{background:#eef3fb}
 .btn-link{display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,#122a52,#1b356b);color:#fff;font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:8px;text-decoration:none;box-shadow:0 3px 9px rgba(27,53,107,.22);white-space:nowrap}
 .btn-link:hover{opacity:.92}
 .link{display:inline-block;margin-top:10px;font-size:13px;color:#0f2a63;text-decoration:none}
@@ -490,8 +492,10 @@ function card(n, action){
     || '<div class="prep muted">· 正文没抓到（内容可能在附件里），展开点原文看要求</div>';
   const pts = (n.key_points||[]).map(function(p){ return '<li>'+esc(p)+'</li>'; }).join('')
     || '<li class="muted">这条通知正文很短（内容可能在附件里），请点开原文查看具体要求</li>';
+  const isManual = String(n.url||'').indexOf('local:') === 0;
+  const aiBtn = (action==='del' && isManual) ? '<button class="aiBtn" data-u="'+esc(n.url)+'">AI 提炼</button>' : '';
   const btns = action==='del'
-    ? '<button class="push mini" data-u="'+esc(n.url||'')+'">推送</button><button class="del" data-k="'+esc(keyOf(n))+'">删除</button>'
+    ? '<button class="push mini" data-u="'+esc(n.url||'')+'">推送</button>'+aiBtn+'<button class="del" data-k="'+esc(keyOf(n))+'">删除</button>'
     : action==='rest'
       ? '<button class="rest" data-k="'+esc(keyOf(n))+'">恢复</button><button class="purge" data-k="'+esc(keyOf(n))+'">彻底删除</button>'
       : '';
@@ -806,7 +810,7 @@ function onRows(containerId, handle){
   const box = document.getElementById(containerId);
   if (!box) return;
   box.addEventListener('click', function(e){
-    const btn = e.target.closest('.del,.rest,.push,.purge');
+    const btn = e.target.closest('.del,.rest,.push,.purge,.aiBtn');
     if (btn && box.contains(btn)){ handle(btn); return; }
     // 正文快照（原生 details）自己负责展开，不折叠整卡
     if (e.target.closest('details.full')) return;
@@ -909,6 +913,7 @@ function bindRows(){
     toast('已移入回收站');
   });
   onRows('archiveList', function(btn){
+    if (btn.classList.contains('aiBtn')){ manAiRefine(btn.getAttribute('data-u') || ''); return; }
     if (btn.classList.contains('push')){ handlePush(btn); return; }
     const k = btn.getAttribute('data-k');
     if (!k) return;
@@ -1467,7 +1472,7 @@ let aiSeq = 0;
 
 async function aiPoll(qid, item, b, title, today, times){
   for (let i = 0; i < times; i++){
-    await nap(6000);
+    await nap(8000);
     try {
       const res = await fetch(sbBase() + '/rest/v1/nc_items?kind=eq.aiq&key=eq.' + encodeURIComponent(qid), { headers: sbHead() });
       if (!res.ok) continue;
@@ -1584,7 +1589,7 @@ async function aiTryAnyway(title, b, today, box){
   box.insertAdjacentHTML('beforeend',
     '<div class="hint" id="manAiHint" style="margin-top:8px">规则判了不留，但已经把这段排给 AI 再看一遍（后台定时处理，通常几分钟）。AI 觉得该留，卡片会直接出现在这里。</div>');
   for (let i = 0; i < 20; i++){
-    await nap(6000);
+    await nap(8000);
     try {
       const res = await fetch(sbBase() + '/rest/v1/nc_items?kind=eq.aiq&key=eq.' + encodeURIComponent(qid), { headers: sbHead() });
       if (!res.ok) continue;
