@@ -1025,6 +1025,7 @@ function pickKeyForPush(pts, budget){
 function pushViaMail(n){
   // 推送正文：每条要点单独一行；要点多时按重要程度挑关键的，而不是从末尾砍
   const to = String(ld('nc_pushmail') || '').trim();
+  if (!to){ toast('先在页面顶部「推送邮箱」那一栏填上邮箱，再点推送', 'err'); return; }
   const subject = '【' + (n.category || '通知') + '】' + pushClip(n.title, 50);
   const head = [];
   head.push('分类：' + (n.category || '未分类') + '　重要度：' + stars(n.score));
