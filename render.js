@@ -1491,13 +1491,64 @@ async function aiPoll(qid, item, b, title, today, times){
       if (r2.key_points && r2.key_points.length) item.key_points = r2.key_points;
       item.engine = 'ai';
       lastPick = item;
+      // AI 版回来了：留档里如果已经存过这条，一起更新，别让留档还停在旧版
+      let synced = false;
+      try {
+        const curA = ld(KEY_MAN) || [];
+        for (let q = 0; q < curA.length; q++){
+          if (keyOf(curA[q]) === keyOf(item)){
+            const cleanA = Object.assign({}, item);
+            delete cleanA._aiQid;
+            curA[q] = cleanA;
+            sv(KEY_MAN, curA.slice(0, 300));
+            renderArchive();
+            counts();
+            synced = true;
+            break;
+          }
+        }
+      } catch(e){}
       renderManCard(item, b, item.title, today);
-      toast('AI 提炼好了：' + item.category + ' / ' + item.score + ' 星', 'ok');
+      toast(synced ? ('AI 提炼好了，留档里这条也一起更新：' + item.category + ' / ' + item.score + ' 星') : ('AI 提炼好了：' + item.category + ' / ' + item.score + ' 星'), 'ok');
       return true;
     } catch(e){}
   }
   toast('AI 结果还没回来（后台每 5 分钟跑一次），过一会儿点卡片里的「再查 AI 结果」', 'err');
   return false;
+}
+
+async function syncPendingAi(){
+  // 存留档时 AI 还没回来，这次打开页面补查一次；回来了就直接更新留档里那条
+  if (!SB) return;
+  const cur = ld(KEY_MAN) || [];
+  const pend = cur.filter(function(x){ return x && x._aiQid && x.engine !== 'ai'; }).slice(0, 5);
+  for (let i = 0; i < pend.length; i++){
+    const qid = pend[i]._aiQid;
+    try {
+      const res = await fetch(sbBase() + '/rest/v1/nc_items?kind=eq.aiq&key=eq.' + encodeURIComponent(qid), { headers: sbHead() });
+      if (!res.ok) continue;
+      const rows = await res.json();
+      const p = rows && rows[0] && rows[0].payload;
+      if (!p || p.status !== 'done' || !p.result) continue;
+      const r2 = p.result;
+      const a = ld(KEY_MAN) || [];
+      for (let q = 0; q < a.length; q++){
+        if (keyOf(a[q]) === keyOf(pend[i])){
+          if (r2.title) a[q].title = r2.title;
+          if (r2.category) a[q].category = r2.category;
+          if (r2.score) a[q].score = r2.score;
+          if (r2.event_time) a[q].event_time = r2.event_time;
+          if (r2.key_points && r2.key_points.length) a[q].key_points = r2.key_points;
+          a[q].engine = 'ai';
+          delete a[q]._aiQid;
+          sv(KEY_MAN, a.slice(0, 300));
+          renderArchive(); counts();
+          toast('留档里「' + String(a[q].title || '').slice(0, 14) + '」的 AI 版回来了，已更新', 'ok');
+          break;
+        }
+      }
+    } catch(e){}
+  }
 }
 
 async function aiQueueThenWait(item, b, today){
@@ -1857,6 +1908,8 @@ renderSites();
 syncCloud();
 bindRows();
 counts();
+// 上次没等到 AI 就先存了留档的，这次打开页面补查一遍
+setTimeout(function(){ try { syncPendingAi(); } catch(e){} }, 2000);
 if (!STORAGE_OK){
   setTimeout(function(){ toast('这个浏览器不让存本地数据，删除只在本次打开有效', 'err'); }, 800);
 }
