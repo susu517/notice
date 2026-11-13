@@ -438,7 +438,7 @@ function ld(k){
 }
 function sv(k,v){
   MEM[k] = v.slice();
-  try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){ STORAGE_OK = false; }
+  try { localStorage.setItem(k, JSON.stringify(v)); STORAGE_OK = true; return true; } catch(e){ STORAGE_OK = false; return false; }
 }
 function keyOf(n){ return n.url || n.title; }
 // 卡片底部的抓取时间，形如「11-10 18:55 抓取」
@@ -509,9 +509,9 @@ function card(n, action){
     + (n.engine==='ai'?' · <b class="eng">AI 提炼</b>':(n.engine==='rule'?' · 规则提炼':''))+'</div>'
     + '<div class="foot"><span class="fetched">'+fetchtxt(n)+'</span>'
     + '<div class="acts">' + btns
-    + (n.url ? '<a class="btn-link" href="'+esc(n.url)+'" rel="noopener" onclick="event.stopPropagation();location.href=this.href;return false;"">原文 →</a>' : '')
+    + ((n.url && String(n.url).indexOf('local:') !== 0) ? '<a class="btn-link" href="'+esc(n.url)+'" rel="noopener" onclick="event.stopPropagation();location.href=this.href;return false;">原文 →</a>' : '')
     + '</div></div>'
-    + (n.url ? '<a class="rawurl" href="'+esc(n.url)+'" rel="noopener" onclick="event.stopPropagation();location.href=this.href;return false;"">'+esc(n.url)+'</a>' : '')
+    + (n.url ? (String(n.url).indexOf('local:') === 0 ? '<div class="rawurl">手动输入 · 没有关联原文链接</div>' : '<a class="rawurl" href="'+esc(n.url)+'" rel="noopener" onclick="event.stopPropagation();location.href=this.href;return false;">'+esc(n.url)+'</a>') : '')
     + '</article>';
 }
 
@@ -626,7 +626,7 @@ function renderArchive(){
   const bar = document.getElementById('arcbar');
   if (bar){
     const imp = list.filter(function(n){ return n.category==='评奖资助'; }).length;
-    const man = list.filter(function(n){ return n.engine==='extract' || n.site==='手动提取' || n.manual; }).length;
+    const man = list.filter(function(n){ return n.engine==='extract' || n.site==='手动提取' || n.site==='手动输入' || String(n.url||'').indexOf('local:')===0; }).length;
     const old = list.length ? (list[list.length-1].published_at || '') : '';
     bar.innerHTML = '共 <b>'+list.length+'</b> 条 · 重要 <b>'+imp+'</b> · 手动提取 <b>'+man+'</b>'
       + (old ? ' · 最早 <b>'+esc(old)+'</b>' : '');
@@ -1432,10 +1432,20 @@ function renderManCard(item, b, title, today){
     readManEdit(item);
     const cur = ld(KEY_MAN) || [];
     if (!cur.some(function(n){ return keyOf(n) === keyOf(item); })) cur.unshift(item);
-    sv(KEY_MAN, cur.slice(0, 300));
-    sbPush('note', keyOf(item), item);
-    toast(SB ? '已存入留档：云端和本机都存了' : '已存入留档（保存在这台设备的浏览器里）', 'ok');
+    const okLocal = sv(KEY_MAN, cur.slice(0, 300));
     renderScreen(); renderArchive(); counts();
+    if (!okLocal){
+      toast('这台设备的存储已经满了，这条只临时保留，刷新可能会丢', 'err');
+    } else {
+      toast('已存入留档，正在打开留档页', 'ok');
+    }
+    if (SB){
+      sbPush('note', keyOf(item), item).then(function(ok){
+        if (!ok) toast('云端没存上，只在这台设备里：换手机或清缓存就看不到了', 'err');
+      });
+    }
+    // 存完直接跳到留档，省得以为没存进去
+    setTimeout(function(){ try { switchTab('archive'); } catch(e){} }, 300);
   };
   document.getElementById('manDrop').onclick = function(){
     const cur = (ld(KEY_MAN) || []).filter(function(n){ return keyOf(n) !== keyOf(item); });
