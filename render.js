@@ -460,6 +460,19 @@ function tokenSet(v){ MEM['nc_gh_token']=v; try{ localStorage.setItem('nc_gh_tok
 
 const KEY_MAN = 'nc_manual';
 // 本机存进去的条目 + 仓库同步下来的条目一起参与筛选；同一条不会重复出现
+function timeKey(n){
+  var s = String((n && n.published_at) || '');
+  var m = s.match(/([0-9]{4})[-/年]([0-9]{1,2})[-/月]([0-9]{1,2})/);
+  if (!m) return '';
+  return m[1] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[3]).slice(-2);
+}
+function byNewest(a, b){
+  var A = timeKey(a), B = timeKey(b);
+  if (A === B) return 0;
+  if (!A) return 1;
+  if (!B) return -1;
+  return A < B ? 1 : -1;
+}
 function alive(){
   const d = ld(KEY_DEL), p = ld(KEY_PURGE);
   const base = DATA.filter(function(n){ return d.indexOf(keyOf(n))<0 && p.indexOf(keyOf(n))<0; });
@@ -467,9 +480,9 @@ function alive(){
     const k = keyOf(n);
     return d.indexOf(k) < 0 && !base.some(function(x){ return keyOf(x) === k; });
   });
-  return local.concat(base);
+  return local.concat(base).sort(byNewest);
 }
-function dead(){ const d=ld(KEY_DEL), p=ld(KEY_PURGE); return DATA.filter(function(n){ return d.indexOf(keyOf(n))>=0 && p.indexOf(keyOf(n))<0; }); }
+function dead(){ const d=ld(KEY_DEL), p=ld(KEY_PURGE); return DATA.filter(function(n){ return d.indexOf(keyOf(n))>=0 && p.indexOf(keyOf(n))<0; }).sort(byNewest); }
 
 function card(n, action){
   const short = function(p){ const t = String(p||''); return t.length > 50 ? (t.slice(0,48)+'…') : t; };
