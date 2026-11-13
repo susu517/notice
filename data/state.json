@@ -35,7 +35,8 @@
       "https://spxy.zjgsu.edu.cn/?news/7124.html",
       "https://spxy.zjgsu.edu.cn/?news/7123.html",
       "https://spxy.zjgsu.edu.cn/?news/7137.html",
-      "https://spxy.zjgsu.edu.cn/?news/7132.html"
+      "https://spxy.zjgsu.edu.cn/?news/7132.html",
+      "https://spxy.zjgsu.edu.cn/?news/7143.html"
     ],
     "https://spxy.zjgsu.edu.cn/?xgdt.html": [
       "https://spxy.zjgsu.edu.cn/?news/7131.html",
@@ -114,15 +115,15 @@
     ]
   },
   "site_checked": {
-    "https://spxy.zjgsu.edu.cn/?tzgg.html": "2026-11-13T08:08:38.326Z",
-    "https://spxy.zjgsu.edu.cn/?xgdt.html": "2026-11-13T08:08:38.729Z",
-    "https://spxy.zjgsu.edu.cn/?xskj.html": "2026-11-13T08:08:39.108Z",
-    "https://spxy.zjgsu.edu.cn/?jyxx.html": "2026-11-13T08:08:39.480Z",
-    "https://spxy.zjgsu.edu.cn/?yjsdt.html": "2026-11-13T08:08:39.837Z",
-    "https://spxy.zjgsu.edu.cn/?dqdt.html": "2026-11-13T08:08:40.211Z",
+    "https://spxy.zjgsu.edu.cn/?tzgg.html": "2026-11-13T09:24:11.356Z",
+    "https://spxy.zjgsu.edu.cn/?xgdt.html": "2026-11-13T09:24:18.254Z",
+    "https://spxy.zjgsu.edu.cn/?xskj.html": "2026-11-13T09:24:18.676Z",
+    "https://spxy.zjgsu.edu.cn/?jyxx.html": "2026-11-13T09:24:19.084Z",
+    "https://spxy.zjgsu.edu.cn/?yjsdt.html": "2026-11-13T09:24:19.526Z",
+    "https://spxy.zjgsu.edu.cn/?dqdt.html": "2026-11-13T09:24:19.952Z",
     "https://spxy.zjgsu.edu.cn/?zxdt.html": "2026-11-10T10:56:00.815Z",
-    "https://jww.zjgsu.edu.cn/1331/list.htm": "2026-11-13T08:08:41.432Z",
-    "https://xsc.zjgsu.edu.cn/1826/list.htm": "2026-11-13T08:08:42.596Z"
+    "https://jww.zjgsu.edu.cn/1331/list.htm": "2026-11-13T09:24:22.086Z",
+    "https://xsc.zjgsu.edu.cn/1826/list.htm": "2026-11-13T09:24:24.467Z"
   },
   "last_alert": ""
 }
