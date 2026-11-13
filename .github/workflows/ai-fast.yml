@@ -1,0 +1,30 @@
+name: AI 队列加速
+
+# 和 ai-screen.yml 跑同一个处理脚本 ai-screen.js，只是节奏更密：
+# GitHub 的定时任务经常被推迟或跳过，多个 workflow 一起兜底能明显缩短等待。
+on:
+  schedule:
+    - cron: '*/3 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ai-screen
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 处理待提炼任务
+        env:
+          ZHIPU_KEY: ${{ secrets.ZHIPU_KEY }}
+          SB_URL: https://dahjqedaxctiaytytdio.supabase.co
+          SB_KEY: sb_publishable_dBzYKy6B_K_t3P0akIc5fA_aob4vTfp
+        run: node ai-screen.js
