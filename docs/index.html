@@ -121,7 +121,7 @@ footer{text-align:center;color:#9aa4b5;font-size:12px;margin-top:30px}
 <div class="wrap">
   <header>
     <h1>学院信息筛选助手</h1>
-    <div class="meta">浙江工商大学 食品与生物工程学院 · 最后更新 2026/11/13 11:40:15</div>
+    <div class="meta">浙江工商大学 食品与生物工程学院 · 最后更新 2026/11/13 11:45:31</div>
   </header>
 
   <nav class="tabs" id="tabs">
@@ -1401,28 +1401,52 @@ function pushClip(s, n){
   return s.length > n ? (s.slice(0, n) + '…') : s;
 }
 
+// 要点太多时的筛选：按「是否含可执行信息」打分，优先留时间/地点/报名/联系方式这类
+function pickKeyForPush(pts, budget){
+  // 打分：有可执行信息（时间/地点/报名/材料/联系方式/数字）分高，口号套话扣分
+  const scoreOf = function (p) {
+    let s = 0;
+    if (/截止|报名|提交|申请|资格|条件|对象|范围|时间|地点|邮箱|电话|联系|费用|金额|缴费|面试|笔试|考试|名额/.test(p)) s += 4;
+    if (/材料|流程|方式|地址|链接|附件|填写|发送|审核|公示|公布|步骤|要求|地点|格式|命名|尺寸|原件|复印件|签字|盖章|一式/.test(p)) s += 2;
+    if (/须|必须|务必|不得|禁止|限/.test(p)) s += 3;
+    if (/[0-9]/.test(p)) s += 2;
+    if (/贯彻|落实|旨在|营造|氛围|热情|习惯|台阶|号召|动员|高度重视|大力|进一步|深入|积极|踊跃|希望|祝愿|感谢|圆满|顺利|祝贺|成功举办|共同努力|良好|重要意义|精神|风采|展示自我/.test(p)) s -= 4;
+    const len = String(p).length;
+    if (len >= 10 && len <= 55) s += 1;
+    if (len < 8) s -= 3;
+    return s;
+  };
+  const marked = pts.map(function (p, k) { return { p: p, i: k, s: scoreOf(p) }; });
+  marked.sort(function (a, b) { return b.s - a.s || a.i - b.i; });
+  // 条数上限：手机上读的邮件不要超过 15 条；先从上限和实际条数里取小的，塞不下再减
+  const cap = Math.min(pts.length, 15);
+  for (let keep = cap; keep >= 3; keep--) {
+    const chosen = marked.slice(0, keep).sort(function (a, b) { return a.i - b.i; });
+    const text = chosen.map(function (x, k) { return (k + 1) + '. ' + x.p; }).join('\n');
+    if (encodeURIComponent(text).length <= budget) return chosen.map(function (x) { return { p: x.p, i: x.i }; });
+  }
+  return marked.slice(0, 3).sort(function (a, b) { return a.i - b.i; }).map(function (x) { return { p: x.p, i: x.i }; });
+}
+
 function pushViaMail(n){
-  // 推送正文按点列出：每条要点单独一行并带序号；要点尽量给全，超长才从后往前精简
+  // 正文按点列出；要点过多时按重要度筛选，而不是直接砍掉后面几条
   const to = String(ld('nc_pushmail') || '').trim();
   const subject = '【' + (n.category || '通知') + '】' + pushClip(n.title, 50);
   const head = [];
   head.push('分类：' + (n.category || '未分类') + '　重要度：' + stars(n.score));
   if (n.event_time) head.push('时间：' + pushClip(n.event_time, 100));
-  const all = (n.key_points || []).map(function(p, i){ return (i + 1) + '. ' + pushClip(p, 100); });
+  const raw = (n.key_points || []).map(function (p) { return pushClip(p, 100); });
   const isLocal = String(n.url || '').indexOf('local:') === 0;
   const tail = (!isLocal && n.url) ? ['', '原文：' + n.url] : [];
-  let body = '';
-  let keep = all.length;
-  for (let i = 0; i < 80; i++){
-    const list = all.slice(0, keep);
-    body = [head.join('\n'), '']
-      .concat(list.length ? list : ['（这条还没有提炼要点，在卡片里点「重新提炼」可以生成）'])
-      .concat(all.length > keep ? ['', '（要点精简为前 ' + keep + ' 条，完整共 ' + all.length + ' 条，详情见页面）'] : [])
-      .concat(tail)
-      .join('\n');
-    if (encodeURIComponent(body).length <= 4000) break;
-    if (keep > 1) keep -= 1; else break;
-  }
+  const fixed = [head.join('\n'), ''].concat(tail).join('\n');
+  const budget = Math.max(200, 6000 - encodeURIComponent(fixed).length);
+  const picked = raw.length ? pickKeyForPush(raw, budget) : [];
+  const lines = picked.map(function (x, k) { return (k + 1) + '. ' + x.p; });
+  const body = [head.join('\n'), '']
+    .concat(lines.length ? lines : ['（这条还没有提炼要点，在卡片里点「重新提炼」可以生成）'])
+    .concat(raw.length > picked.length ? ['', '（共 ' + raw.length + ' 条要点，这里挑出最重要的 ' + picked.length + ' 条，全部见页面）'] : [])
+    .concat(tail)
+    .join('\n');
   window.location.href = 'mailto:' + encodeURIComponent(to)
     + '?subject=' + encodeURIComponent(subject)
     + '&body=' + encodeURIComponent(body);
