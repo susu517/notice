@@ -121,7 +121,7 @@ footer{text-align:center;color:#9aa4b5;font-size:12px;margin-top:30px}
 <div class="wrap">
   <header>
     <h1>学院信息筛选助手</h1>
-    <div class="meta">浙江工商大学 食品与生物工程学院 · 最后更新 2026/11/13 10:37:09</div>
+    <div class="meta">浙江工商大学 食品与生物工程学院 · 最后更新 2026/11/13 11:20:01</div>
   </header>
 
   <nav class="tabs" id="tabs">
@@ -1402,18 +1402,26 @@ function pushClip(s, n){
 }
 
 function pushViaMail(n){
+  // 推送正文按点列出：每条要点单独一行并带序号；要点尽量给全，超长才从后往前精简
   const to = String(ld('nc_pushmail') || '').trim();
   const subject = '【' + (n.category || '通知') + '】' + pushClip(n.title, 50);
   const head = [];
-  if (n.summary) head.push(pushClip(n.summary, 110));
+  head.push('分类：' + (n.category || '未分类') + '　重要度：' + stars(n.score));
   if (n.event_time) head.push('时间：' + pushClip(n.event_time, 100));
-  const pts = (n.key_points || []).slice(0, 4).map(function(p){ return '· ' + pushClip(p, 90); });
-  const tail = n.url ? ['原文：' + n.url] : [];
+  const all = (n.key_points || []).map(function(p, i){ return (i + 1) + '. ' + pushClip(p, 100); });
+  const isLocal = String(n.url || '').indexOf('local:') === 0;
+  const tail = (!isLocal && n.url) ? ['', '原文：' + n.url] : [];
   let body = '';
-  for (let i = 0; i < 6; i++){
-    body = head.concat(pts, tail).join('\n');
-    if (encodeURIComponent(body).length <= 1500) break;
-    if (pts.length > 1) pts.pop(); else break;
+  let keep = all.length;
+  for (let i = 0; i < 80; i++){
+    const list = all.slice(0, keep);
+    body = [head.join('\n'), '']
+      .concat(list.length ? list : ['（这条还没有提炼要点，在卡片里点「重新提炼」可以生成）'])
+      .concat(all.length > keep ? ['', '（要点精简为前 ' + keep + ' 条，完整共 ' + all.length + ' 条，详情见页面）'] : [])
+      .concat(tail)
+      .join('\n');
+    if (encodeURIComponent(body).length <= 4000) break;
+    if (keep > 1) keep -= 1; else break;
   }
   window.location.href = 'mailto:' + encodeURIComponent(to)
     + '?subject=' + encodeURIComponent(subject)
@@ -1426,8 +1434,10 @@ function handlePush(btn){
   if (!u) return;
   const el = document.getElementById('pushMail');
   if (el && el.value.trim()) sv('nc_pushmail', el.value.trim());
-  const n = DATA.filter(function(x){ return x.url === u; })[0]
-    || { url: u, title: '通知', category: '', score: 0 };
+  // 手动输入的卡片 url 是 local:时间戳，不在 DATA 里，要单独从 lastPick 取
+  let n = DATA.filter(function(x){ return x.url === u; })[0];
+  if (!n && lastPick && lastPick.url === u) n = lastPick;
+  if (!n) n = { url: u, title: '通知', category: '', score: 0 };
   pushViaMail(n);
 }
 
