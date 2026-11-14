@@ -1,20 +1,21 @@
-name: AI 队列加速
+name: AI 队列常驻
 
-# 和 ai-screen.yml 跑同一个处理脚本 ai-screen.js，只是节奏更密：
-# GitHub 的定时任务经常被推迟或跳过，多个 workflow 一起兜底能明显缩短等待。
+# GitHub 的定时任务对小仓库经常不触发（原来每 5 分钟那条实测几十分钟才跑一次）。
+# 改成"每 6 小时唤醒一次、醒着时每分钟扫一次队列"：
+# 唤醒次数少，被跳过的概率低；醒着就连续盯 5 个多小时，AI 延迟能压到 1 分钟左右。
 on:
   schedule:
-    - cron: '*/3 * * * *'
+    - cron: '0 */6 * * *'
   workflow_dispatch:
 
 concurrency:
-  group: ai-screen
+  group: ai-queue-long
   cancel-in-progress: false
 
 jobs:
-  tick:
+  loop:
     runs-on: ubuntu-latest
-    timeout-minutes: 4
+    timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
 
@@ -22,9 +23,14 @@ jobs:
         with:
           node-version: 20
 
-      - name: 处理待提炼任务
+      - name: 每分钟扫一次队列（约 5 个半小时）
         env:
           ZHIPU_KEY: ${{ secrets.ZHIPU_KEY }}
           SB_URL: https://dahjqedaxctiaytytdio.supabase.co
           SB_KEY: sb_publishable_dBzYKy6B_K_t3P0akIc5fA_aob4vTfp
-        run: node ai-screen.js
+        run: |
+          for i in $(seq 1 330); do
+            echo "[$i/330] $(date -u '+%H:%M:%S')"
+            node ai-screen.js || true
+            sleep 60
+          done
